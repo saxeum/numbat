@@ -16,13 +16,16 @@ requested (see `agents.md`).
 | # | Decision | Choice | Alternatives considered |
 |---|----------|--------|-------------------------|
 | D1 | Hosting model | **Single Worker serving static assets + API** | Pages + Functions; two separate deployments |
-| D2 | Frontend | **Vite + React (pure SPA)** | React Router v7 framework mode; TanStack Start; Astro; Next.js via OpenNext |
+| D2 | Frontend | **Vite + React SPA** — React Router, TanStack Query, Tailwind + **shadcn/ui** (see [`frontend.md`](frontend.md)) | Mantine; MUI; Ant Design; DaisyUI; framework modes (React Router v7, TanStack Start, Next via OpenNext) |
 | D3 | API framework | **Hono** with Zod + OpenAPI | itty-router + chanfana; plain `fetch`; tRPC/oRPC |
-| D4 | Persistence | **D1 + Drizzle ORM** | KV-only; Hyperdrive + Postgres; Durable Objects |
+| D4 | Persistence | **Deferred to a later stage** — intended D1 + Drizzle when needed (see §16) | KV-only; Hyperdrive + Postgres; Durable Objects |
 | D5 | Unit/integration tests | **Vitest + `@cloudflare/vitest-pool-workers`** | Miniflare directly; mocked bindings |
 | D6 | Browser E2E tests | **Playwright** | Cypress |
 | D7 | CI/CD | **GitHub Actions + `cloudflare/wrangler-action`** (with Workers Builds as an option) | Workers Builds only; manual `wrangler deploy` |
-| D8 | Auth | **Deferred — see §10** | Cloudflare Access; Better Auth; managed IdP |
+| D8 | Auth | **Deferred to a later stage** (see §10) | Cloudflare Access; Better Auth; managed IdP |
+| D9 | Repo structure | **Monorepo (workspaces)** — API and web apps plus a shared contracts package | Single package |
+| D10 | Custom domain | **Deferred to a later stage** — use `*.workers.dev` for now (see §16) | Attach a domain now |
+| D11 | Preview deployments | **Deferred to a later stage** (see §12, §16) | Per-PR Workers env; Workers Builds previews |
 
 ---
 
@@ -94,25 +97,29 @@ headers (default: no-store unless a handler opts into caching).
 ## 5. Proposed repository layout
 
 ```
-cf-e2e/
-├── agents.md                  # agent rules + verified CLI access
+cf-e2e/                          # monorepo root (workspaces)
+├── agents.md                    # agent rules + verified CLI access
 ├── docs/
-│   └── architecture.md        # this document
-├── src/
-│   ├── api/                   # Hono app: routes, middleware, schemas
-│   └── db/                    # Drizzle schema, queries, migrations
-├── web/                       # Vite + React SPA source
-│   └── ...                    # built output consumed by Static Assets
+│   └── architecture.md          # this document
+├── package.json                 # workspace root
+├── wrangler.jsonc               # Worker config: assets, bindings, envs
+├── apps/
+│   ├── web/                     # Vite + React SPA (static build output)
+│   └── worker/                  # Hono API + Worker entry
+│       └── src/
+│           ├── api/             # routes, middleware, schemas
+│           └── db/              # Drizzle schema, queries, migrations (later)
+├── packages/
+│   └── shared/                  # shared Zod contracts + TS types (api ↔ web)
 ├── tests/
-│   ├── unit/                  # Vitest (Workers pool)
-│   └── e2e/                   # Playwright
-├── wrangler.jsonc             # Worker config: assets, bindings, envs
-├── .dev.vars                  # local secrets (gitignored)
-├── .gitignore
-└── package.json
+│   ├── unit/                    # Vitest (Workers pool)
+│   └── e2e/                     # Playwright
+├── .dev.vars                    # local secrets (gitignored)
+└── .gitignore
 ```
 
-> This is a proposal. The layout is finalized when scaffolding begins.
+> The monorepo uses workspaces (npm workspaces; pnpm optional). `packages/shared`
+> holds contracts shared between API and web so types and validation stay in sync.
 
 ---
 
@@ -165,31 +172,39 @@ error normalization.
 ## 8. Frontend architecture
 
 - **Rendering:** client-side only (SPA). The Worker never renders React.
-- **Routing:** client router with history API; unknown deep links fall back to
-  `index.html`.
-- **State/data:** to be decided during scaffolding (e.g. TanStack Query for
-  server state; minimal local state). Not fixed here.
-- **Styling / component library:** open — decide at scaffold time.
 - **Build:** Vite produces the static bundle consumed by the assets binding.
-- **Types:** API types shared from the OpenAPI document or generated client to keep
-  frontend and backend in sync.
+- **Routing:** React Router (library mode); unknown deep links fall back to
+  `index.html`.
+- **Server state:** TanStack Query. **Client state:** React built-ins (Zustand only
+  if a real global-store need appears).
+- **Styling & UI:** Tailwind CSS + **shadcn/ui** (Radix primitives, components
+  owned in-repo).
+- **Forms:** React Hook Form + Zod, validating with schemas shared from
+  `packages/shared`.
+- **Tables:** TanStack Table (shadcn data-table pattern).
+- **API types:** Hono RPC client for end-to-end types across the monorepo; the
+  OpenAPI document remains the contract for docs/external clients.
+
+Full detail: [`frontend.md`](frontend.md).
 
 ---
 
 ## 9. Local development
 
-- **Worker/API:** `wrangler dev` runs the Worker in `workerd` with real bindings,
-  including a local D1 instance and local persistence.
+- **Worker/API:** `wrangler dev` runs the Worker in `workerd` with real bindings
+  (local D1 is used once persistence is introduced — see §16).
 - **Frontend:** Vite dev server for fast HMR; `/api` proxied to the Worker during
   development.
 - **Secrets:** `.dev.vars` for local-only values.
-- **Data:** local D1 state via Drizzle migrations applied to the local instance.
+- **Data:** local D1 state via Drizzle migrations, added with persistence (§16).
 
 ---
 
-## 10. Authentication & authorization (open)
+## 10. Authentication & authorization (deferred to a later stage)
 
-Not yet decided. Options, in order of least code:
+**Decision: deferred.** Authentication is out of scope for the first milestone and
+will be added in a later stage. The options below are the shortlist, in order of
+least code:
 
 1. **Cloudflare Access** — zero application code for internal/private apps.
 2. **Self-hosted on Workers** — Better Auth / Auth.js / Lucia, sessions in the
@@ -216,7 +231,9 @@ bindings rather than mocks.
 ## 12. CI/CD
 
 - **On pull request:** install → typecheck → lint → unit/integration tests →
-  build → (optionally) deploy a preview environment.
+  build (no deploy).
+- **Preview deployments: deferred to a later stage.** When added, choose per-PR
+  Workers environments or Workers Builds previews (see §16).
 - **On merge to `main`:** build → deploy to production via
   `cloudflare/wrangler-action`, authenticated with a Cloudflare API token stored as
   a GitHub Actions secret.
@@ -270,23 +287,32 @@ rights, distinct from the interactive OAuth session used for local `wrangler`.
 
 ---
 
-## 16. Open questions
+## 16. Deferred items & open questions
 
-1. **Auth** — which of the §10 options?
-2. **Database** — is D1 required for the first milestone, or API-only?
-3. **Custom domain / route** — attach a `saxeum` domain or use `*.workers.dev`?
-4. **Monorepo vs single package** — keep the SPA and Worker in one package
-   (recommended) or a workspace split.
-5. **Frontend data/state library** and component/styling approach.
-6. **Preview deployments** — per-PR Workers environment or Workers Builds previews?
+### Deferred to a later stage
+Deliberately out of scope for the first milestone; each is revisited before it
+becomes a blocker.
+
+1. **Authentication / authorization** — see §10. Must be resolved before any
+   user-specific data model is finalized.
+2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
+   D1 + Drizzle is the intended choice when persistence is introduced.
+3. **Custom domain** — deployed to `*.workers.dev` for now; a custom domain/route
+   is attached later.
+4. **Preview deployments** — CI runs tests and builds but does not deploy
+   previews yet (see §12).
+
+### Open
+None at present. The frontend stack — the last open item — is now decided; see
+[`frontend.md`](frontend.md).
 
 ---
 
 ## 17. Next steps
 
-1. Resolve §16.1 (auth) and §16.2 (database).
-2. Scaffold: Vite + React SPA, Hono API, `wrangler.jsonc` with static assets + SPA
-   fallback.
-3. Add Drizzle + D1 and the first migration if a database is in scope.
-4. Add Vitest Workers pool and a Playwright smoke test.
-5. Add the GitHub Actions workflow for tests + deploy.
+1. Scaffold the monorepo: workspace root, `apps/web` (Vite + React SPA),
+   `apps/worker` (Hono API), `packages/shared` (Zod contracts), and
+   `wrangler.jsonc` with static assets + SPA fallback.
+2. Add Vitest Workers pool and a Playwright smoke test.
+3. Add the GitHub Actions workflow for tests and production deploy.
+4. Revisit the deferred items when they reach the top of the backlog.
