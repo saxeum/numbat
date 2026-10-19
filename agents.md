@@ -16,11 +16,15 @@ Guidance for AI agents working in this repository.
 
 ## Project
 
-`cf-e2e` — (project description pending).
+`cf-e2e` — TypeScript application with a React SPA frontend and a REST API
+backend, deployed to Cloudflare Workers.
 
 - **Source of truth:** GitHub. Code lives under the personal account `gmtreacy`
-  or the `saxeum` organization.
+  or the `saxeum` organization. This repo: **`saxeum/cf-e2e`**.
 - **Deployment target:** Cloudflare Workers (via Wrangler).
+- **Architecture:** see [`docs/architecture.md`](docs/architecture.md) for the
+  accepted design (single Worker + static assets, Hono API, D1/Drizzle, Vitest
+  Workers pool + Playwright) and the current open questions.
 
 ## Verified CLI Access
 
