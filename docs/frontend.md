@@ -34,6 +34,13 @@ explicitly requested (see `agents.md`).
 | Component tests | **Vitest + React Testing Library** | — |
 | E2E tests | **Playwright** | Cypress |
 
+> **Versions at scaffold time (2026-10):** Vite 9, React 19, TypeScript 7,
+> React Router 8 (library mode), Tailwind v4, and shadcn v4 (Nova preset, unified
+> `radix-ui`). Forms use React Hook Form 7 with `@hookform/resolvers@5.9`
+> (`6.x` has an `effect` peer conflict — see `scaffold-runbook.md` §12). Note that
+> TypeScript 7 removed `baseUrl`: the `@/*` alias is declared with `paths` only and
+> mirrored in `vite.config.ts`.
+
 ---
 
 ## 2. Why shadcn/ui

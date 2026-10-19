@@ -133,7 +133,7 @@ If C3 ran `npm install`, delete any `apps/worker/package-lock.json` and
 ### 3.2 Dependencies
 
 ```bash
-npm install -w apps/worker hono @hono/zod-openapi zod
+npm install -w apps/worker hono@^4.13 zod@^4.6 @hono/zod-openapi@^1.6
 npm install -w apps/worker -D wrangler typescript @cloudflare/workers-types
 ```
 
@@ -192,7 +192,7 @@ Health endpoint for smoke tests: `GET /api/health` → `{ "ok": true }`.
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "dependencies": { "zod": "^3.24.0" }
+  "dependencies": { "zod": "^4.6.0" }
 }
 ```
 
@@ -205,9 +205,11 @@ Health endpoint for smoke tests: `GET /api/health` → `{ "ok": true }`.
   npm install -w apps/web    @numbat/shared
   ```
 
-> **Zod caution:** pin a single Zod major used by `@numbat/shared`,
-> `@hono/zod-openapi`, and `@hookform/resolvers`. Check each library's peer range
-> before upgrading; Zod v3 is the safest common denominator today.
+> **Zod:** standardize on **Zod 4** (`^4.6`). `@hono/zod-openapi@1.x` requires
+> `zod: ^4.0.0`, and `@hookform/resolvers@6.x` accepts `^3.25.0 || ^4.0.0`, so
+> Zod 4 is the current common denominator across `@numbat/shared`,
+> `@hono/zod-openapi`, and `@hookform/resolvers`. (Zod 3 would now *conflict* with
+> `@hono/zod-openapi@1.x`.) `@hono/zod-openapi@1.6` also needs `hono >=4.10.0`.
 
 ---
 
@@ -215,46 +217,69 @@ Health endpoint for smoke tests: `GET /api/health` → `{ "ok": true }`.
 
 ### 5.1 Scaffold
 
-**Option A — C3 React template (recommended):**
+**Option B — Vite directly, then wire Cloudflare by hand (used for numbat):**
+
+```bash
+npm create vite@latest apps/web -- --template react-ts
+```
+
+Then apply §5.3–§5.5 by hand. A pure static SPA needs no per-request Worker entry,
+so `npx wrangler setup` is not required and its interactive prompts are avoided.
+Clean up any per-app lockfile/node_modules as in §3.1 (in practice the workspace
+root hoists the install, so there is usually nothing to delete).
+
+**Option A — C3 React template (alternative):**
 
 ```bash
 npm create cloudflare@latest apps/web -- \
   --framework react --platform workers --no-deploy --no-git --lang ts
 ```
 
-**Option B — Vite directly, then Cloudflare-ify:**
-
-```bash
-npm create vite@latest apps/web -- --template react-ts
-cd apps/web && npx wrangler setup
-```
-
-Clean up any per-app lockfile/node_modules as in §3.1.
+C3 is interactive (framework/platform/variant prompts) and its template ships
+extra files (assets Worker entry, `public/`) you must reconcile with
+§5.3–§5.5.
 
 ### 5.2 Add the frontend stack
 
 ```bash
-npm install -w apps/web react-router @tanstack/react-query react-hook-form @hookform/resolvers zod
+npm install -w apps/web react-router @tanstack/react-query react-hook-form \
+  @hookform/resolvers@^5.9 zod@^4.6
 npm install -w apps/web tailwindcss @tailwindcss/vite
-npx shadcn@latest init -c apps/web
+npm install -w apps/web @numbat/shared
+npx shadcn@latest init -t vite -b radix -p nova -y --no-monorepo
 ```
 
 - **Tailwind v4:** add the `@tailwindcss/vite` plugin in `vite.config.ts` and
   `@import "tailwindcss";` in the main CSS file. No `tailwind.config.js` needed.
-- **shadcn:** requires a path alias. In `apps/web/tsconfig.json` (and
-  `tsconfig.app.json`) set `"baseUrl": "."` and `"paths": { "@/*": ["./src/*"] }`,
-  and mirror it in `vite.config.ts` under `resolve.alias`
-  (`@` → `/src`, using `node:path` and `@types/node`).
-- **React Router v7:** the package is `react-router` (library mode); use
-  `createBrowserRouter` + `RouterProvider`.
+- **shadcn v4:** requires a path alias. In `apps/web/tsconfig.json` and
+  `tsconfig.app.json` set `"paths": { "@/*": ["./src/*"] }` — **do not set
+  `baseUrl`; TypeScript 7 removed it** (paths resolve relative to the tsconfig
+  file). Mirror the alias in `vite.config.ts` under `resolve.alias` (`@` → `src`
+  via `node:path` + `import.meta.dirname`, with `@types/node`). Run `init`
+  non-interactively as shown; the **Nova** preset emits `style: "radix-nova"`,
+  owns `src/components/ui/*` and `src/lib/utils.ts`, and pulls unified
+  `radix-ui`, `cn`, `lucide-react`, `class-variance-authority`, `tw-animate-css`,
+  `@fontsource-variable/geist`, and `shadcn/tailwind.css`.
+- **`@hookform/resolvers` must be pinned to `^5.9`** — `6.0.0` declares
+  `peerOptional effect@^4` while the transitive `@typeschema` chain pins
+  `effect@3`, which npm rejects with `ERESOLVE` (see §12).
+- **React Router (v8 at time of writing):** the package is `react-router`
+  (library mode); use `createBrowserRouter` + `RouterProvider`.
 
 ### 5.3 `vite.config.ts` essentials
 
 ```ts
-// illustrative
-server: { proxy: { "/api": "http://localhost:8787" } }
-// plugins: [react(), tailwindcss()]
-// resolve.alias: { "@": "/src" }
+import path from "node:path";
+
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
+  server: { proxy: { "/api": "http://localhost:8787" } },
+});
 ```
 
 The dev proxy is what hides the two-Worker split locally: Vite serves the SPA,
@@ -294,10 +319,15 @@ and `/api/*` is forwarded to the API Worker.
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -b"
   }
 }
 ```
+
+> **`typecheck` uses `tsc -b`, not `tsc --noEmit`.** The Vite template uses TS
+> project references with a root config of `"files": []`, so `tsc --noEmit`
+> checks *nothing*. `tsc -b` traverses the referenced configs and respects each
+> one's `noEmit`.
 
 ---
 
@@ -310,6 +340,21 @@ Worker creates the apex DNS record.
 npm run deploy:api     # registers foonix.net/api/* -> numbat-api
 npm run deploy:web     # builds SPA, registers foonix.net (custom domain)
 ```
+
+> **Run Wrangler per app.** Because the repo root is an npm workspace, a bare
+> `wrangler deploy` (or `--dry-run`) in the root fails with "the Cloudflare
+> application detection logic has been run in the root of a workspace". Use the
+> root scripts (`npm run deploy:api|web`), `cd` into the app, or pass
+> `-c apps/<app>/wrangler.jsonc`.
+
+> **`workers.dev` and preview URLs.** Declaring a `routes` entry disables the
+> Worker's `*.workers.dev` hostname by default, so the only ingress is the zone
+> route (untestable until the web Worker creates apex DNS). Set
+> `"workers_dev": true` to keep a testable hostname; for this account the test
+> URL is `https://numbat-api.<account-subdomain>.workers.dev` (account subdomain
+> `<account-subdomain>`). Enabling `workers_dev` also enables per-version **Preview URLs**
+> by default (Wrangler warns); preview deployments are deferred (architecture
+> D11), so set `"preview_urls": false` explicitly.
 
 Verify:
 
@@ -324,10 +369,12 @@ curl -sI https://foonix.net/
 Expected: apex resolves; `/api/health` returns JSON from the API Worker; `/`
 returns the SPA; a deep link like `/some/client/route` also returns the SPA shell.
 
-> **Coexistence check (do this once):** confirm a Workers **custom domain** at
-> `foonix.net` and a **path route** `foonix.net/api/*` to a *different* Worker can
-> coexist. If the platform rejects it, fall back to a single Worker or a
-> service-binding proxy (see `architecture.md` D1 alternatives).
+> **Coexistence check — ✅ verified 2026-10-19.** A Workers **custom domain** at
+> `foonix.net` (`numbat-web`) and a **path route** `foonix.net/api/*` to a
+> *different* Worker (`numbat-api`) coexist on the same zone. Confirmed: apex DNS
+> resolves; `/api/health` → JSON from `numbat-api`; `/` and `/some/client/route`
+> → the SPA shell from `numbat-web`. The single-Worker / service-binding fallback
+> (`architecture.md` D1 alternatives) is not needed.
 
 Staging/preview: keep the default `*.workers.dev` hostnames available for
 non-production environments so `foonix.net` stays production-only.
@@ -355,7 +402,7 @@ Open http://localhost:5173. Secrets go in each app's `.dev.vars` (gitignored).
 ### 8.1 Worker integration tests (Vitest + Workers pool)
 
 ```bash
-npm install -w apps/worker -D vitest @cloudflare/vitest-pool-workers
+npm install -w apps/worker -D vitest@~4.1.12 @cloudflare/vitest-pool-workers@~0.23.0
 ```
 
 `apps/worker/vitest.config.ts`:
@@ -376,9 +423,10 @@ export default defineWorkersConfig({
 Tests run inside `workerd` with real bindings, so Hono routes and (later) D1 are
 exercised for real.
 
-> **Version caution:** `@cloudflare/vitest-pool-workers` pins a compatible Vitest
-> range. Install Vitest at a version that satisfies it, not necessarily the very
-> latest.
+> **Version caution:** `@cloudflare/vitest-pool-workers@0.23.0` declares peer
+> `vitest: ^4.1.0` (plus `@vitest/runner` / `@vitest/snapshot` `^4.1.0`). Vitest
+> `latest` is currently **5.x**, which the pool does **not** accept — pin
+> `vitest@~4.1.12`. Do not float to Vitest 5 until the pool widens its peer range.
 
 ### 8.2 End-to-end (Playwright)
 
@@ -426,16 +474,18 @@ without a custom workflow — adopt it only if it covers the test gates you want
 
 ## 10. Verification checklist
 
-- [ ] `npm run typecheck` clean across workspaces
-- [ ] Unit/integration tests pass (`npm test`)
-- [ ] `npm run build` produces `apps/web/dist`
-- [ ] `wrangler deploy --dry-run` succeeds in both apps
-- [ ] `dig +short foonix.net` resolves
-- [ ] `https://foonix.net/` serves the SPA
-- [ ] `https://foonix.net/<client-route>` serves the SPA (fallback works)
-- [ ] `https://foonix.net/api/health` returns the API response
-- [ ] `wrangler tail numbat-api` shows live requests
-- [ ] CI workflow is green and deploys both Workers on `main`
+Status as of the 2026-10-19 scaffold:
+
+- [x] `npm run typecheck` clean across workspaces
+- [ ] Unit/integration tests pass (`npm test`) — tests not scaffolded yet (§8)
+- [x] `npm run build` produces `apps/web/dist`
+- [x] `wrangler deploy --dry-run` succeeds in both apps
+- [x] `dig +short foonix.net` resolves
+- [x] `https://foonix.net/` serves the SPA
+- [x] `https://foonix.net/<client-route>` serves the SPA (fallback works)
+- [x] `https://foonix.net/api/health` returns the API response
+- [ ] `wrangler tail numbat-api` shows live requests — not yet exercised
+- [ ] CI workflow is green and deploys both Workers on `main` — §9 pending
 
 ---
 
@@ -457,8 +507,21 @@ without a custom workflow — adopt it only if it covers the test gates you want
   at the root is the workspace source of truth.
 - **Keep `compatibility_date` identical** in both `wrangler.jsonc` files and bump
   them together.
-- **Zod major** and **Vitest pool** versions are the two most likely sources of
-  install friction (§4, §8.1) — resolve those first if `npm ci` complains.
+- **Zod** is standardized on v4 (`^4.6`) and **Vitest is pinned to `~4.1.12`** to
+  satisfy `@cloudflare/vitest-pool-workers@0.23.0` (peer `^4.1.0`). These are the
+  two most likely sources of install friction (§4, §8.1) — resolve those first if
+  `npm ci` complains.
+- **TypeScript 7 removed `baseUrl`** — declare path aliases with `paths` alone
+  (`"@/*": ["./src/*"]`), resolved relative to the tsconfig file, and mirror the
+  alias in `vite.config.ts`. The runbook's older `baseUrl` guidance is superseded.
+- **`@hookform/resolvers`:** pin `^5.9` (Zod 4-capable). `6.0.0` fails `npm ci`
+  with an `effect` peer conflict (`effect@^4` vs the transitive `effect@3`).
+- **Stack at scaffold time (2026-10):** Vite 9, React 19, TypeScript 7,
+  `react-router` 8, shadcn v4 (Nova preset, unified `radix-ui`), Tailwind v4.
+- **`routes` disables `workers.dev`** — add `"workers_dev": true` for a
+  testable hostname and `"preview_urls": false` (preview deployments are
+  deferred; §6).
+- **Invoke Wrangler per app**, never at the workspace root (§6).
 - **Auth stays deferred** (see `architecture.md` §10); `/api/*` is intentionally
   public until then.
 - **`ungozenji`** remains deployed but unbound; delete it separately when ready.
