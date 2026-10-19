@@ -1,4 +1,4 @@
-# cf-e2e — Frontend
+# numbat — Frontend
 
 - **Status:** Accepted
 - **Date:** 2026-10-19

@@ -1,8 +1,8 @@
-# cf-e2e — Architecture
+# numbat — Architecture
 
 - **Status:** Accepted (proposed baseline)
 - **Date:** 2026-10-19
-- **Repo:** `saxeum/cf-e2e`
+- **Repo:** `saxeum/numbat`
 - **Scope:** TypeScript application — React SPA frontend, REST API backend — deployed to Cloudflare Workers.
 
 This document records the target architecture and the decisions behind it. It is
@@ -129,7 +129,7 @@ headers (default: no-store unless a handler opts into caching).
 ## 5. Proposed repository layout
 
 ```
-cf-e2e/                          # monorepo root (workspaces)
+numbat/                          # monorepo root (workspaces)
 ├── agents.md                    # agent rules + verified CLI access
 ├── docs/
 │   └── architecture.md          # this document
@@ -359,6 +359,8 @@ None at present. The frontend stack — the last open item — is now decided; s
 ---
 
 ## 17. Next steps
+
+The step-by-step execution guide is [`scaffold-runbook.md`](scaffold-runbook.md).
 
 1. Scaffold the monorepo: workspace root, `apps/web` (Vite + React SPA, web
    Worker), `apps/worker` (Hono API Worker), and `packages/shared` (Zod contracts).
