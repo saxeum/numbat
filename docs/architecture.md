@@ -15,7 +15,7 @@ requested (see `agents.md`).
 
 | # | Decision | Choice | Alternatives considered |
 |---|----------|--------|-------------------------|
-| D1 | Hosting model | **Single Worker serving static assets + API** | Pages + Functions; two separate deployments |
+| D1 | Hosting model | **Two Workers, one origin** — web Worker (static assets) + API Worker (Hono), path-routed on a custom domain | Single Worker (assets + API); Pages + Functions; service-binding proxy |
 | D2 | Frontend | **Vite + React SPA** — React Router, TanStack Query, Tailwind + **shadcn/ui** (see [`frontend.md`](frontend.md)) | Mantine; MUI; Ant Design; DaisyUI; framework modes (React Router v7, TanStack Start, Next via OpenNext) |
 | D3 | API framework | **Hono** with Zod + OpenAPI | itty-router + chanfana; plain `fetch`; tRPC/oRPC |
 | D4 | Persistence | **Deferred to a later stage** — intended D1 + Drizzle when needed (see §16) | KV-only; Hyperdrive + Postgres; Durable Objects |
@@ -24,30 +24,40 @@ requested (see `agents.md`).
 | D7 | CI/CD | **GitHub Actions + `cloudflare/wrangler-action`** (with Workers Builds as an option) | Workers Builds only; manual `wrangler deploy` |
 | D8 | Auth | **Deferred to a later stage** (see §10) | Cloudflare Access; Better Auth; managed IdP |
 | D9 | Repo structure | **Monorepo (workspaces)** — API and web apps plus a shared contracts package | Single package |
-| D10 | Custom domain | **Deferred to a later stage** — use `*.workers.dev` for now (see §16) | Attach a domain now |
+| D10 | Custom domain | **`foonix.net`** (apex; Cloudflare zone already in-account). Web + API share the origin via path routes | Subdomain split; `*.workers.dev` |
 | D11 | Preview deployments | **Deferred to a later stage** (see §12, §16) | Per-PR Workers env; Workers Builds previews |
 
 ---
 
 ## 2. System overview
 
-A single Cloudflare Worker owns both the client and the server surface:
+Two Workers share one public origin under the custom domain `foonix.net`:
 
 ```
-                    ┌──────────────────────── Cloudflare edge ────────────────────────┐
-   Browser ───────▶ │  Worker (cf-e2e)                                                 │
-                    │                                                                  │
-                    │   /api/*   ──▶  Hono REST API ──▶  bindings (D1, KV, R2, ...)    │
-                    │                                                                  │
-                    │   *        ──▶  Static Assets binding ──▶ built React SPA        │
-                    │                 (SPA fallback → index.html for client routes)   │
-                    └──────────────────────────────────────────────────────────────────┘
+                         Cloudflare zone: foonix.net
+                    ┌────────────────────────────────────────────────
+   Browser ───────▶ │  foonix.net/api/*  ──▶  API Worker (Hono)        │
+                    │                            │                    │
+                    │                            ▼                    │
+                    │                     bindings (D1, KV, R2, ...)   │
+                    │                                                 │
+                    │  foonix.net/*      ──▶  Web Worker              │
+                    │                            │                    │
+                    │                            ▼                    │
+                    │                     React SPA static assets     │
+                    │                     (+ SPA fallback)            │
+                    └────────────────────────────────────────────────
 ```
 
-**Why one Worker:** same origin means no CORS configuration, first-class cookies
-and sessions, one deploy artifact, one `wrangler` config, and no cross-service
-auth plumbing. Static asset requests are served by Cloudflare's asset layer and
-do not consume Worker CPU unless routed to the Worker.
+**Why this shape:** the zone's route table sends `/api/*` to the API Worker and
+everything else to the web Worker. Because both live on the same hostname, the
+browser sees a single origin — no CORS, and first-party cookies for auth later
+(§10). The two Workers deploy independently while sharing one public origin.
+Cloudflare matches the more specific route (`/api/*`) before the catch-all (`/*`).
+
+The origin is **public by design**: `foonix.net/api/*` is an intentionally public
+REST surface. Access control, when introduced, is the API's own responsibility
+(§10, §14) — the route is not a security boundary.
 
 ---
 
@@ -55,13 +65,14 @@ do not consume Worker CPU unless routed to the Worker.
 
 ### 3.1 Frontend — Vite + React SPA
 - TypeScript throughout; client-side routing (React Router, library mode).
-- Build output is a static bundle (HTML, JS, CSS, assets) consumed by the Worker's
-  Static Assets binding.
+- Build output is a static bundle (HTML, JS, CSS, assets) served by the **web
+  Worker** through its Static Assets binding.
 - No SSR server. Deep links resolve client-side via the SPA fallback.
 - Data fetching talks to the same-origin `/api` surface.
 
 ### 3.2 API — Hono + Zod/OpenAPI
-- Hono router mounted at `/api`, running in the Worker.
+- Hono router mounted at `/api`, running in the **API Worker** — a separate
+deployable from the web Worker.
 - Zod schemas validate request bodies, params, query strings, and define response
   shapes; `@hono/zod-openapi` generates an OpenAPI document served by the app.
 - Middleware: request ID, structured logging, error handling, (later) auth and
@@ -77,17 +88,38 @@ do not consume Worker CPU unless routed to the Worker.
 - Not every environment needs a database; D1 is introduced only when persistence is
   required. The architecture allows it to be added without restructuring.
 
+### 3.4 Routing — zone routes on `foonix.net`
+
+| Route pattern | Worker | Serves |
+|---|---|---|
+| `foonix.net/api/*` | API Worker | Hono REST API |
+| `foonix.net/*` | Web Worker | React SPA static assets + SPA fallback |
+
+- Both Workers and the `foonix.net` zone are in the same Cloudflare account
+  (`<cloudflare-account-id>`), so routes and the custom domain are managed
+  with the existing `wrangler` credentials.
+- A Workers **custom domain** at `foonix.net` provides the DNS record and
+  certificate; the API Worker is attached with a **path route** (`/api/*` is more
+  specific than the catch-all, so it wins).
+- The apex was reclaimed from a retired Worker (`ungozenji`); it now has no routes
+  or DNS records other than what this project creates.
+- Verify custom-domain + path-route coexistence when wiring up; the fallback if the
+  platform disallows it is a single Worker or a service-binding proxy (D1
+  alternatives).
+
 ---
 
 ## 4. Request lifecycle
 
-1. Request hits the Worker on the edge.
-2. If the path matches the API prefix (`/api/*`), the Worker runs Hono:
-   request ID → logging → validation → handler → typed JSON response.
-3. Otherwise the Static Assets binding serves the matching built asset.
-4. If no static asset matches and the request looks like a client route, the SPA
-   fallback returns `index.html` so the React router can resolve it.
-5. Errors are normalized into a single JSON error envelope (§7.3).
+1. A request reaches Cloudflare's edge for `foonix.net`.
+2. The zone route table matches the path:
+   - `/api/*` → **API Worker**: Hono runs request ID → logging → validation →
+     handler → typed JSON response; errors are normalized into the error envelope
+     (§7.3).
+   - anything else → **Web Worker**: the Static Assets binding serves the matching
+     built asset.
+3. If no static asset matches and the request looks like a client route, the web
+   Worker's SPA fallback returns `index.html` so the React router can resolve it.
 
 Static assets are cached by Cloudflare's CDN; API responses set explicit cache
 headers (default: no-store unless a handler opts into caching).
@@ -102,10 +134,11 @@ cf-e2e/                          # monorepo root (workspaces)
 ├── docs/
 │   └── architecture.md          # this document
 ├── package.json                 # workspace root
-├── wrangler.jsonc               # Worker config: assets, bindings, envs
 ├── apps/
-│   ├── web/                     # Vite + React SPA (static build output)
-│   └── worker/                  # Hono API + Worker entry
+│   ├── web/                     # Web Worker: Vite + React SPA (static assets)
+│   │   └── wrangler.jsonc       #   route: foonix.net/*
+│   └── worker/                  # API Worker: Hono + Worker entry
+│       ├── wrangler.jsonc       #   route: foonix.net/api/*
 │       └── src/
 │           ├── api/             # routes, middleware, schemas
 │           └── db/              # Drizzle schema, queries, migrations (later)
@@ -125,20 +158,29 @@ cf-e2e/                          # monorepo root (workspaces)
 
 ## 6. Configuration
 
-Worker configuration lives in `wrangler.jsonc`:
+Each app is its own Worker and has its own `wrangler.jsonc`:
 
-- **Compatibility:** pinned `compatibility_date`, with flags opted in explicitly.
-- **Static assets:** a build-output directory, an assets binding, and
+**`apps/web/wrangler.jsonc`** (web Worker)
+- **Static assets:** build-output directory, assets binding, and
   `not_found_handling` set to SPA mode so client routes fall through to
   `index.html`.
-- **Routing precedence:** configure which requests run the Worker first (the API
-  prefix) versus which are served as static assets.
+- **Route:** `foonix.net/*` (catch-all); the `foonix.net` custom domain is owned
+  here, providing the DNS record and certificate.
+
+**`apps/worker/wrangler.jsonc`** (API Worker)
+- **Route:** `foonix.net/api/*` (more specific, so it wins for API calls).
 - **Bindings:** D1, KV, R2, etc., declared per environment.
+
+Shared across both:
+- **Compatibility:** a pinned `compatibility_date`, kept in sync between the two
+  configs, with flags opted in explicitly.
 - **Environments:** named environments (e.g. `staging`, `production`) with separate
-  bindings and secrets.
+  routes, bindings, and secrets.
+- **Account/zone:** both Workers and the `foonix.net` zone live in the same
+  Cloudflare account.
 
 Secrets never live in the config or repo:
-- Local: `.dev.vars` (already gitignored).
+- Local: per-app `.dev.vars` (already gitignored).
 - Remote: `wrangler secret put` / CI secrets.
 
 ---
@@ -171,7 +213,8 @@ error normalization.
 
 ## 8. Frontend architecture
 
-- **Rendering:** client-side only (SPA). The Worker never renders React.
+- **Rendering:** client-side only (SPA). The web Worker serves static assets and
+  never renders React.
 - **Build:** Vite produces the static bundle consumed by the assets binding.
 - **Routing:** React Router (library mode); unknown deep links fall back to
   `index.html`.
@@ -191,11 +234,11 @@ Full detail: [`frontend.md`](frontend.md).
 
 ## 9. Local development
 
-- **Worker/API:** `wrangler dev` runs the Worker in `workerd` with real bindings
-  (local D1 is used once persistence is introduced — see §16).
-- **Frontend:** Vite dev server for fast HMR; `/api` proxied to the Worker during
-  development.
-- **Secrets:** `.dev.vars` for local-only values.
+- **API Worker:** `wrangler dev` in `apps/worker` runs the Hono API in `workerd`
+  with real bindings (local D1 is used once persistence is introduced — see §16).
+- **Web:** Vite dev server in `apps/web` for fast HMR; `/api` is proxied to the API
+  Worker during development, so the split origin is invisible locally.
+- **Secrets:** per-app `.dev.vars` for local-only values.
 - **Data:** local D1 state via Drizzle migrations, added with persistence (§16).
 
 ---
@@ -211,7 +254,10 @@ least code:
    same-origin Worker (simple because there is no CORS).
 3. **Managed IdP** — Clerk / Auth0 / WorkOS for social, MFA, enterprise SSO.
 
-This must be resolved before any user-specific data model is finalized.
+This must be resolved before any user-specific data model is finalized. Because the
+API Worker is a public surface (§2), auth — when introduced — is enforced **inside
+the API Worker** (tokens/sessions); the same-origin setup keeps cookies
+first-party.
 
 ---
 
@@ -234,9 +280,9 @@ bindings rather than mocks.
   build (no deploy).
 - **Preview deployments: deferred to a later stage.** When added, choose per-PR
   Workers environments or Workers Builds previews (see §16).
-- **On merge to `main`:** build → deploy to production via
-  `cloudflare/wrangler-action`, authenticated with a Cloudflare API token stored as
-  a GitHub Actions secret.
+- **On merge to `main`:** build → deploy **both Workers** (web and API) to
+  production via `cloudflare/wrangler-action` (e.g. a matrix over the two apps),
+  authenticated with a Cloudflare API token stored as a GitHub Actions secret.
 - **Alternative:** **Workers Builds** connects the Git repo and builds/deploys on
   push without a custom workflow; can be adopted if it covers the required gates.
 - **Environments:** separate Workers environments for staging and production,
@@ -261,7 +307,9 @@ rights, distinct from the interactive OAuth session used for local `wrangler`.
 ## 14. Security
 
 - Secrets only in `.dev.vars` (local) and Workers secrets (remote); never committed.
-- Same-origin design removes the CORS attack surface by default.
+- Same-origin, path-routed design removes the CORS attack surface by default.
+- The API is intentionally public; any sensitive endpoint must be protected by auth
+  in the API Worker (§10) — the route itself is not a security boundary.
 - Input validated at the edge with Zod before reaching handlers or the database.
 - Security headers (CSP, HSTS, etc.) applied by middleware; Cloudflare WAF / rate
   limiting available at the edge.
@@ -272,14 +320,18 @@ rights, distinct from the interactive OAuth session used for local `wrangler`.
 ## 15. Consequences & trade-offs
 
 **Benefits**
-- One deploy, one config, one origin; no CORS or cross-service auth complexity.
+- One public origin — no CORS.
+- Web and API deploy independently.
 - TypeScript everywhere with shared contracts via OpenAPI.
 - Local dev and tests run in the real `workerd` runtime with real bindings.
 - Cheap to start; services (D1, KV, R2, Queues, DO) added incrementally.
 
 **Trade-offs / risks**
-- Frontend and backend deploy together; no independent release cadence (mitigated
-  by environments, not by splitting).
+- Two Workers means two configs, two deploy targets, and two sets of secrets to keep
+  in sync (mitigated by a shared `compatibility_date` and a CI matrix).
+- The API is publicly addressable, so it must own its own access control (§14).
+- The custom domain and the `/api/*` path route must coexist on one zone (verified
+  at wire-up; fallback is a single Worker).
 - Static assets are client-rendered, so first paint waits on JS (acceptable for an
   SPA; SSR would require a framework change — see D2 alternatives).
 - Worker CPU limits apply to API work; long-running jobs should move to Queues or
@@ -297,9 +349,7 @@ becomes a blocker.
    user-specific data model is finalized.
 2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
    D1 + Drizzle is the intended choice when persistence is introduced.
-3. **Custom domain** — deployed to `*.workers.dev` for now; a custom domain/route
-   is attached later.
-4. **Preview deployments** — CI runs tests and builds but does not deploy
+3. **Preview deployments** — CI runs tests and builds but does not deploy
    previews yet (see §12).
 
 ### Open
@@ -310,9 +360,10 @@ None at present. The frontend stack — the last open item — is now decided; s
 
 ## 17. Next steps
 
-1. Scaffold the monorepo: workspace root, `apps/web` (Vite + React SPA),
-   `apps/worker` (Hono API), `packages/shared` (Zod contracts), and
-   `wrangler.jsonc` with static assets + SPA fallback.
-2. Add Vitest Workers pool and a Playwright smoke test.
-3. Add the GitHub Actions workflow for tests and production deploy.
-4. Revisit the deferred items when they reach the top of the backlog.
+1. Scaffold the monorepo: workspace root, `apps/web` (Vite + React SPA, web
+   Worker), `apps/worker` (Hono API Worker), and `packages/shared` (Zod contracts).
+2. Wire the domain: `foonix.net` custom domain on the web Worker, `/api/*` route to
+   the API Worker.
+3. Add Vitest Workers pool and a Playwright smoke test.
+4. Add the GitHub Actions workflow for tests and production deploy of both Workers.
+5. Revisit the deferred items when they reach the top of the backlog.

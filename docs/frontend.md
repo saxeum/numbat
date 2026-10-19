@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-19
 - **Scope:** The React SPA that runs in `apps/web` and is served as static assets by
-  the Cloudflare Worker (see [`architecture.md`](architecture.md)).
+  the **web Worker** at `foonix.net/*` (see [`architecture.md`](architecture.md)).
 
 This document records the frontend stack decision, the rationale, and the
 conventions the code will follow. It is descriptive — code is written only when
@@ -106,8 +106,9 @@ apps/web/
 
 - **`packages/shared`** holds Zod schemas and TypeScript types used by both the API
   (`apps/worker`) and the web app, so validation and types never drift.
-- **`apps/web`** builds to a static bundle consumed by the Worker's Static Assets
-  binding; the SPA fallback is configured in the Worker (`architecture.md` §6).
+- **`apps/web`** builds to a static bundle consumed by the **web Worker's** Static
+  Assets binding; the SPA fallback is configured in that Worker's route
+  (`architecture.md` §6).
 
 ---
 
