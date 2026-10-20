@@ -19,9 +19,14 @@
 | 1 Spec + tooling + scripts | ✅ |
 | 2 Plain Hono routes via generated Zod (`@hono/zod-openapi` removed) | ✅ |
 | 3 `/api/openapi.json` + Swagger UI at `/api/docs` | ✅ |
-| 4 SPA on generated artifacts | ◐ uses generated Zod/types; generated client/hooks deferred |
-| 5 Mocks / contract tests | ☐ |
+| 4 SPA on generated artifacts | ⏸ deferred (uses generated Zod/types; generated client not worth it yet) |
+| 5 Mocks / contract tests | ⏸ deferred |
 
+> **Phases 4–5 deferred (2026-10-20):** with only ~5 endpoints, hand-written
+> fetch wrappers are readable and the drift risk is low; a generated client is
+> LOC-neutral (and `orval` hooks would cost the optimistic-update control).
+> Revisit when the API grows to ~15–20 endpoints. See KAN-18 (closed as deferred).
+>
 > **Deviation — generator:** the recommended `@hey-api/openapi-ts` **crashes under
 > TypeScript 7** (it depends on the `ts.SyntaxKind` compiler API). We instead use
 > **`openapi-zod-client`** with a vendored template (`openapi/zod-schemas.hbs`),
