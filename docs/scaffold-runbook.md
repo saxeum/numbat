@@ -527,7 +527,7 @@ without a custom workflow — adopt it only if it covers the test gates you want
 
 ## 10. Verification checklist
 
-Status as of the 2026-10-19 scaffold:
+Status as of the 2026-10-20 scaffold:
 
 - [x] `npm run typecheck` clean across workspaces
 - [x] Unit/integration tests pass (`npm test`) — Worker tests inside `workerd`; E2E via `npm run test:e2e`
@@ -537,8 +537,8 @@ Status as of the 2026-10-19 scaffold:
 - [x] `https://foonix.net/` serves the SPA
 - [x] `https://foonix.net/<client-route>` serves the SPA (fallback works)
 - [x] `https://foonix.net/api/health` returns the API response
-- [ ] `wrangler tail numbat-api` shows live requests — not yet exercised
-- [ ] CI workflow is green and deploys both Workers on `main` — §9 pending
+- [x] `wrangler tail numbat-api` shows live requests — verified (`GET https://foonix.net/api/health`, `outcome: ok`)
+- [x] CI workflow is green and deploys both Workers on `main` — run `39348133365`: `verify`, `deploy worker`, `deploy web` all succeeded
 
 ---
 
