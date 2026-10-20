@@ -40,6 +40,8 @@ backend, deployed to Cloudflare Workers.
   (single-user full CRUD, tracking ticket **KAN-15**).
 - **OpenAPI plan:** see [`docs/openapi-plan.md`](docs/openapi-plan.md)
   (spec-first `openapi.yaml` + codegen + Swagger UI, tracking ticket **KAN-16**).
+- **Auth plan:** see [`docs/auth-plan.md`](docs/auth-plan.md)
+  (Google OAuth via Better Auth, per-user todos, tracking ticket **KAN-13**).
 
 ## Verified CLI Access
 

@@ -22,7 +22,7 @@ requested (see `agents.md`).
 | D5 | Unit/integration tests | **Vitest + `@cloudflare/vitest-pool-workers`** | Miniflare directly; mocked bindings |
 | D6 | Browser E2E tests | **Playwright** | Cypress |
 | D7 | CI/CD | **GitHub Actions + `cloudflare/wrangler-action`** (with Workers Builds as an option) | Workers Builds only; manual `wrangler deploy` |
-| D8 | Auth | **Deferred to a later stage** (see §10) | Cloudflare Access; Better Auth; managed IdP |
+| D8 | Auth | **Better Auth (self-hosted), Google OAuth first** (see §10, [`auth-plan.md`](auth-plan.md)) | Cloudflare Access; Auth.js; managed IdP |
 | D9 | Repo structure | **Monorepo (workspaces)** — API and web apps plus a shared contracts package | Single package |
 | D10 | Custom domain | **`foonix.net`** (apex; Cloudflare zone already in-account). Web + API share the origin via path routes | Subdomain split; `*.workers.dev` |
 | D11 | Preview deployments | **Per-PR Version URLs** (see `workflow-plan.md` W3) | Named preview env; Workers Builds/Previews |
@@ -247,21 +247,23 @@ Full detail: [`frontend.md`](frontend.md).
 
 ---
 
-## 10. Authentication & authorization (deferred to a later stage)
+## 10. Authentication & authorization
 
-**Decision: deferred.** Authentication is out of scope for the first milestone and
-will be added in a later stage. The options below are the shortlist, in order of
-least code:
+**Decision (2026-10-20): [Better Auth](https://www.better-auth.com) self-hosted in
+the API Worker, Google OAuth as the first provider.** See
+[`auth-plan.md`](auth-plan.md).
 
-1. **Cloudflare Access** — zero application code for internal/private apps.
-2. **Self-hosted on Workers** — Better Auth / Auth.js / Lucia, sessions in the
-   same-origin Worker (simple because there is no CORS).
-3. **Managed IdP** — Clerk / Auth0 / WorkOS for social, MFA, enterprise SSO.
+- **Why:** same-origin (`foonix.net`) keeps session cookies first-party; Better
+  Auth plugs into our **D1 + Drizzle** stack (`drizzleAdapter`) and mounts on
+  **Hono** (`/api/auth/*`); no vendor/MAU cost; more providers later.
+- **Enforcement** lives **inside the API Worker** (§2) — every todo query is
+  owner-scoped; unauthenticated requests get the standard 401 envelope.
+- **Constraint:** Google OAuth redirect URIs are exact (no wildcards), so the
+  dynamic per-PR preview hosts can't use real OAuth; auth is exercised on local +
+  production (and worker tests).
 
-This must be resolved before any user-specific data model is finalized. Because the
-API Worker is a public surface (§2), auth — when introduced — is enforced **inside
-the API Worker** (tokens/sessions); the same-origin setup keeps cookies
-first-party.
+Alternatives considered: Cloudflare Access (no app-level identity); Auth.js
+(Next-centric); managed IdP (Clerk/Auth0/WorkOS — cost/vendor).
 
 ---
 
@@ -351,8 +353,8 @@ rights, distinct from the interactive OAuth session used for local `wrangler`.
 Deliberately out of scope for the first milestone; each is revisited before it
 becomes a blocker.
 
-1. **Authentication / authorization** — see §10. Must be resolved before any
-   user-specific data model is finalized.
+1. **Authentication / authorization** — ✅ decided (Better Auth + Google OAuth);
+   implementation tracked in KAN-13 and [`auth-plan.md`](auth-plan.md).
 2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
    D1 + Drizzle is the intended choice when persistence is introduced.
 3. **Preview deployments** — per-PR Version URLs are wired up (see §12 and
