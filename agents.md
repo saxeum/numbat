@@ -23,8 +23,10 @@ backend, deployed to Cloudflare Workers.
   or the `saxeum` organization. This repo: **`saxeum/numbat`**.
 - **Deployment target:** Cloudflare Workers (via Wrangler).
 - **Architecture:** see [`docs/architecture.md`](docs/architecture.md) for the
-  accepted design (single Worker + static assets, Hono API, D1/Drizzle, Vitest
-  Workers pool + Playwright) and the current open questions.
+  accepted design (two Workers on `foonix.net` — static-assets SPA + Hono API,
+  D1/Drizzle, Vitest + Playwright) and the current open questions.
+- **Workflow plan:** see [`docs/workflow-plan.md`](docs/workflow-plan.md) for the
+  proposed branch/PR/CI hardening and the approval matrix.
 
 ## Verified CLI Access
 
