@@ -24,7 +24,7 @@ explicitly requested (see `agents.md`).
 | Styling | **Tailwind CSS** | CSS Modules; Vanilla Extract; Panda CSS |
 | Components | **shadcn/ui** (Radix primitives, owned in-repo) | Mantine; MUI; Ant Design; DaisyUI; HeroUI |
 | Forms | **React Hook Form** + Zod | TanStack Form; Conform |
-| Validation | **Zod** (shared from `packages/shared`) | Valibot; ArkType |
+| Validation | **Zod** (generated from `openapi/openapi.yaml` → `@numbat/api`) | Valibot; ArkType |
 | Tables | **TanStack Table** (shadcn data-table pattern) | AG Grid; hand-rolled |
 | API client | **Hono RPC** typed client (monorepo) + `fetch` | openapi-fetch from the OpenAPI doc |
 | Icons | **Lucide** (shadcn default) | Heroicons; Phosphor |
@@ -111,8 +111,9 @@ apps/web/
 └── index.html
 ```
 
-- **`packages/shared`** holds Zod schemas and TypeScript types used by both the API
-  (`apps/worker`) and the web app, so validation and types never drift.
+- **`packages/api`** holds the **generated** Zod schemas + TypeScript types
+  (from `openapi/openapi.yaml`) used by both the API (`apps/worker`) and the web
+  app, so validation and types never drift. Regenerate with `npm run api:gen`.
 - **`apps/web`** builds to a static bundle consumed by the **web Worker's** Static
   Assets binding; the SPA fallback is configured in that Worker's route
   (`architecture.md` §6).
@@ -123,11 +124,12 @@ apps/web/
 
 - **Data fetching** goes through TanStack Query hooks; components never call `fetch`
   directly. Query keys are centralized.
-- **API access** uses the **Hono RPC** typed client, giving end-to-end types from
-  the Worker routes without codegen. The OpenAPI document (from
-  `@hono/zod-openapi`) remains the contract for docs and any external consumer.
+- **API access** is typed by the generated `@numbat/api` schemas; the SPA parses
+  responses with them. A generated fetch/query client is a follow-up
+  (`openapi-plan.md` Phase 4). The served OpenAPI document is the contract for
+  docs and external consumers.
 - **Forms** use React Hook Form with `zodResolver`, validating against schemas
-  imported from `packages/shared` — the same schemas the API validates with.
+  from `@numbat/api` — the same schemas the API validates with.
 - **Errors** surface through a single boundary + toast pattern; API error envelopes
   (`architecture.md` §7.3) map to user-facing messages in one place.
 - **Types:** `strict` TypeScript; no `any` in application code.

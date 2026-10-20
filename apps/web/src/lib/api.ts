@@ -1,18 +1,20 @@
-import { HealthResponse, Todo, TodoListResponse } from "@numbat/shared";
-import type { CreateTodoRequest, UpdateTodoRequest } from "@numbat/shared";
+import { Health, Todo } from "@numbat/api";
+import type { CreateTodoRequest, UpdateTodoRequest } from "@numbat/api";
+import { z } from "zod";
 
+const TodoList = z.array(Todo);
 const jsonHeaders = { "content-type": "application/json" };
 
-export async function getHealth(): Promise<HealthResponse> {
+export async function getHealth() {
   const res = await fetch("/api/health");
   if (!res.ok) throw new Error(`Failed to load API health: ${res.status}`);
-  return HealthResponse.parse(await res.json());
+  return Health.parse(await res.json());
 }
 
 export async function listTodos(): Promise<Todo[]> {
   const res = await fetch("/api/todos");
   if (!res.ok) throw new Error(`Failed to load todos: ${res.status}`);
-  return TodoListResponse.parse(await res.json());
+  return TodoList.parse(await res.json());
 }
 
 export async function createTodo(input: CreateTodoRequest): Promise<Todo> {

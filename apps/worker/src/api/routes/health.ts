@@ -1,29 +1,11 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import type { Health } from "@numbat/api";
+import { Hono } from "hono";
 
-import { HealthResponse } from "@numbat/shared";
-
-import { defaultHook } from "../openapi";
 import type { AppEnv } from "../types";
 
-export const health = new OpenAPIHono<AppEnv>({ defaultHook });
+export const health = new Hono<AppEnv>();
 
-const healthRoute = createRoute({
-  method: "get",
-  path: "/",
-  summary: "Service health",
-  responses: {
-    200: {
-      description: "Service is healthy",
-      content: { "application/json": { schema: HealthResponse } },
-    },
-    503: {
-      description: "Service is unhealthy",
-      content: { "application/json": { schema: HealthResponse } },
-    },
-  },
-});
-
-health.openapi(healthRoute, async (c) => {
+health.get("/", async (c) => {
   let database = "healthy";
 
   try {
@@ -38,7 +20,7 @@ health.openapi(healthRoute, async (c) => {
     timestamp: new Date().toISOString(),
     version: c.env.APP_VERSION,
     database,
-  };
+  } satisfies Health;
 
   return ok ? c.json(body, 200) : c.json(body, 503);
 });

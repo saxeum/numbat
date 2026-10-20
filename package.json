@@ -15,6 +15,10 @@
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "api:lint": "redocly lint openapi/openapi.yaml",
+    "api:bundle": "redocly bundle openapi/openapi.yaml -o apps/worker/openapi.json",
+    "api:gen": "npm run api:bundle && openapi-zod-client openapi/openapi.yaml -o packages/api/src/schemas.ts --template ./openapi/zod-schemas.hbs",
+    "api:check": "npm run api:gen && git diff --exit-code -- packages/api apps/worker/openapi.json",
     "test": "npm test --workspaces --if-present",
     "test:e2e": "playwright test",
     "deploy:api": "npm run deploy -w apps/worker",
@@ -22,7 +26,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
+    "@redocly/cli": "^2.65.0",
     "concurrently": "^9",
+    "openapi-zod-client": "^1.18.3",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1"
   },

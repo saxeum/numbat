@@ -1,6 +1,7 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
+import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
 
+import openapi from "../openapi.json";
 import { errorHandler, notFoundHandler } from "./api/middleware/error";
 import { logger } from "./api/middleware/logger";
 import { requestId } from "./api/middleware/request-id";
@@ -21,13 +22,12 @@ export function createApp() {
   app.use("*", securityHeaders());
   app.use("*", logger());
 
-  const api = new OpenAPIHono<AppEnv>();
+  const api = new Hono<AppEnv>();
   api.route("/health", health);
   api.route("/todos", todos);
-  api.doc("/openapi.json", {
-    openapi: "3.0.0",
-    info: { title: "Numbat API", version: "1.0.0" },
-  });
+  // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.
+  api.get("/openapi.json", (c) => c.json(openapi));
+  api.get("/docs", swaggerUI({ url: "/api/openapi.json" }));
 
   app.route("/api", api);
 

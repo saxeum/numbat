@@ -73,8 +73,11 @@ REST surface. Access control, when introduced, is the API's own responsibility
 ### 3.2 API — Hono + Zod/OpenAPI
 - Hono router mounted at `/api`, running in the **API Worker** — a separate
 deployable from the web Worker.
-- Zod schemas validate request bodies, params, query strings, and define response
-  shapes; `@hono/zod-openapi` generates an OpenAPI document served by the app.
+- **Spec-first contracts:** `openapi/openapi.yaml` is the source of truth; codegen
+  (`openapi-zod-client`) produces Zod validators + TypeScript types in
+  `@numbat/api`. Plain Hono routes validate with those schemas
+  (`@hono/zod-validator`); the spec is served at `/api/openapi.json` with Swagger
+  UI at `/api/docs` (see [`openapi-plan.md`](openapi-plan.md)).
 - Middleware: request ID, structured logging, error handling, (later) auth and
   rate limiting.
 - REST conventions are defined in §7.
@@ -143,7 +146,7 @@ numbat/                          # monorepo root (workspaces)
 │           ├── api/             # routes, middleware, schemas
 │           └── db/              # Drizzle schema, queries, migrations (later)
 ├── packages/
-│   └── shared/                  # shared Zod contracts + TS types (api ↔ web)
+│   └── api/                     # GENERATED from openapi.yaml (types + zod)
 ├── tests/
 │   ├── unit/                    # Vitest (Workers pool)
 │   └── e2e/                     # Playwright
@@ -151,8 +154,9 @@ numbat/                          # monorepo root (workspaces)
 └── .gitignore
 ```
 
-> The monorepo uses workspaces (npm workspaces; pnpm optional). `packages/shared`
-> holds contracts shared between API and web so types and validation stay in sync.
+> The monorepo uses workspaces (npm workspaces; pnpm optional). `packages/api`
+> holds the codegen'd contracts (TypeScript types + Zod) shared by API and web;
+> the OpenAPI spec (`openapi/openapi.yaml`) is the source of truth.
 
 ---
 
@@ -222,8 +226,8 @@ error normalization.
   if a real global-store need appears).
 - **Styling & UI:** Tailwind CSS + **shadcn/ui** (Radix primitives, components
   owned in-repo).
-- **Forms:** React Hook Form + Zod, validating with schemas shared from
-  `packages/shared`.
+- **Forms:** React Hook Form + Zod, validating with schemas generated from
+  `openapi/openapi.yaml` (`@numbat/api`).
 - **Tables:** TanStack Table (shadcn data-table pattern).
 - **API types:** Hono RPC client for end-to-end types across the monorepo; the
   OpenAPI document remains the contract for docs/external clients.
@@ -365,7 +369,8 @@ None at present. The frontend stack — the last open item — is now decided; s
 The step-by-step execution guide is [`scaffold-runbook.md`](scaffold-runbook.md).
 
 1. Scaffold the monorepo: workspace root, `apps/web` (Vite + React SPA, web
-   Worker), `apps/worker` (Hono API Worker), and `packages/shared` (Zod contracts).
+   Worker), `apps/worker` (Hono API Worker), and `packages/api` (generated
+   contracts).
 2. Wire the domain: `foonix.net` custom domain on the web Worker, `/api/*` route to
    the API Worker.
 3. Add Vitest Workers pool and a Playwright smoke test.

@@ -53,9 +53,22 @@ status check on `main` (see `docs/workflow-plan.md` W1). Do not merge with red C
 |------|---------|
 | `apps/web` | Web Worker — Vite + React SPA (Tailwind, shadcn) |
 | `apps/worker` | API Worker — Hono, mounted at `/api` |
-| `packages/shared` | `@numbat/shared` — Zod contracts + types used by both |
+| `packages/api` | `@numbat/api` — **generated** Zod + types (from `openapi/openapi.yaml`) |
+| `openapi/` | `openapi.yaml` (source of truth), redocly config, codegen template |
 | `tests/e2e` | Playwright end-to-end tests |
-| `docs/` | Architecture, frontend, scaffold runbook, workflow plan |
+| `docs/` | Architecture, frontend, plans (workflow, readiness, persistence, openapi) |
+
+## API contracts (spec-first)
+
+`openapi/openapi.yaml` is the **source of truth**. After changing it:
+
+```bash
+npm run api:lint   # validate the spec (Redocly)
+npm run api:gen    # regenerate packages/api + apps/worker/openapi.json
+```
+
+CI runs `api:lint` and an `api:check` drift check — commit regenerated output.
+Handlers stay hand-written in Hono, validated with the generated Zod schemas.
 
 ## Boundaries
 

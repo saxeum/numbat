@@ -17,7 +17,14 @@ describe("GET /api/health", () => {
     const res = await SELF.fetch("https://foonix.net/api/openapi.json");
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toMatchObject({ openapi: "3.0.0" });
+    await expect(res.json()).resolves.toMatchObject({ openapi: "3.1.0" });
+  });
+
+  it("serves Swagger UI docs", async () => {
+    const res = await SELF.fetch("https://foonix.net/api/docs");
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
   });
 
   it("does not expose the API outside /api", async () => {

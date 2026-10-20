@@ -6,6 +6,7 @@ dist/
 .wrangler/
 worker-configuration.d.ts
 package-lock.json
+apps/worker/openapi.json
 
 # Test / coverage artifacts
 coverage/
@@ -16,3 +17,6 @@ blob-report/
 # Hand-wrapped prose — keep author-controlled
 docs/
 *.md
+
+# Codegen templates (Handlebars)
+*.hbs

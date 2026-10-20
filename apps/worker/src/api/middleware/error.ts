@@ -1,7 +1,7 @@
 import type { Context, ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 
-import type { ErrorResponse } from "@numbat/shared";
+import type { ErrorResponse } from "@numbat/api";
 
 import type { AppEnv } from "../types";
 

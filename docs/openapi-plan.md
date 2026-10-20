@@ -1,6 +1,6 @@
 # numbat — Spec-First OpenAPI Plan
 
-- **Status:** Proposed
+- **Status:** Implemented (Phases 1–3; Phase 4 partial)
 - **Date:** 2026-10-20
 - **Ticket:** Jira **KAN-16** (relates to KAN-15 todo UI, KAN-12 todos)
 - **Scope:** Replace the current **code-first** `@hono/zod-openapi` setup with a
@@ -9,6 +9,25 @@
   the generated artifacts, with Swagger UI for docs.
 - **Companions:** [`architecture.md`](architecture.md) (§7 contracts, §7.2),
   [`frontend.md`](frontend.md), [`persistence-plan.md`](persistence-plan.md).
+
+---
+
+## 0. Progress & deviations
+
+| Phase | Status |
+|-------|--------|
+| 1 Spec + tooling + scripts | ✅ |
+| 2 Plain Hono routes via generated Zod (`@hono/zod-openapi` removed) | ✅ |
+| 3 `/api/openapi.json` + Swagger UI at `/api/docs` | ✅ |
+| 4 SPA on generated artifacts | ◐ uses generated Zod/types; generated client/hooks deferred |
+| 5 Mocks / contract tests | ☐ |
+
+> **Deviation — generator:** the recommended `@hey-api/openapi-ts` **crashes under
+> TypeScript 7** (it depends on the `ts.SyntaxKind` compiler API). We instead use
+> **`openapi-zod-client`** with a vendored template (`openapi/zod-schemas.hbs`),
+> which emits Zod schemas + inferred types and is TS7-safe. A generated
+> fetch/query client (e.g. `openapi-fetch`/`orval`) remains a Phase-4 follow-up.
+> Codegen runs via `npm run api:gen`; CI checks `api:lint` + drift (`api:check`).
 
 ---
 

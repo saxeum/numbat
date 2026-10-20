@@ -1,0 +1,324 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Numbat API",
+    "version": "0.0.0",
+    "description": "Public REST API for numbat, served at `/api` on `foonix.net`.\n\nThis document is the **source of truth**: server validators, TypeScript\ntypes, the fetch client, and the served OpenAPI document are all generated\nfrom it (see `docs/openapi-plan.md`).\n"
+  },
+  "servers": [
+    {
+      "url": "https://foonix.net/api",
+      "description": "Production"
+    },
+    {
+      "url": "https://numbat-api-staging.<account-subdomain>.workers.dev/api",
+      "description": "Staging"
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "system",
+      "description": "Service metadata"
+    },
+    {
+      "name": "todos",
+      "description": "Anonymous single-user todos"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "system"
+        ],
+        "summary": "Service health",
+        "description": "Liveness/readiness, including a database probe.",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is unhealthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/todos": {
+      "get": {
+        "operationId": "listTodos",
+        "tags": [
+          "todos"
+        ],
+        "summary": "List todos",
+        "responses": {
+          "200": {
+            "description": "All todos, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Todo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createTodo",
+        "tags": [
+          "todos"
+        ],
+        "summary": "Create a todo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTodoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created todo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/todos/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TodoId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateTodo",
+        "tags": [
+          "todos"
+        ],
+        "summary": "Update a todo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTodoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated todo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteTodo",
+        "tags": [
+          "todos"
+        ],
+        "summary": "Delete a todo",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TodoId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Todo identifier",
+        "schema": {
+          "$ref": "#/components/schemas/TodoId"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid input",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "TodoId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "ok",
+          "timestamp",
+          "version"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO-8601 timestamp"
+          },
+          "version": {
+            "type": "string"
+          },
+          "database": {
+            "type": "string",
+            "description": "Database probe result (`healthy` | `unhealthy`)"
+          }
+        }
+      },
+      "Todo": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "completed",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateTodoRequest": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "UpdateTodoRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "completed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "details": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}

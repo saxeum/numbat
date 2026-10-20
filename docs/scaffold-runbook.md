@@ -183,6 +183,11 @@ Health endpoint for smoke tests: `GET /api/health` → `{ "ok": true }`.
 
 ## 4. `packages/shared` — contracts
 
+> **Superseded (2026-10-20):** contracts are now **spec-first** —
+> `openapi/openapi.yaml` is the source of truth and `@numbat/api` is generated
+> (see [`openapi-plan.md`](openapi-plan.md)). The hand-written `@numbat/shared`
+> package has been retired. This section is kept for historical context.
+
 `packages/shared/package.json`:
 
 ```json
