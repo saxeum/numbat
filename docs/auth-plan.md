@@ -1,6 +1,6 @@
 # numbat — Auth Plan (Google OAuth via Better Auth)
 
-- **Status:** Proposed
+- **Status:** Implemented (KAN-13; Google sign-in verified in production)
 - **Date:** 2026-10-20
 - **Ticket:** Jira **KAN-13** (`[S2] User accounts and auth`, epic KAN-11)
 - **Scope:** Add user accounts and make todos per-user, starting with **Google
@@ -8,6 +8,16 @@
 - **Companions:** [`architecture.md`](architecture.md) (§2, §10, §14, §16),
   [`persistence-plan.md`](persistence-plan.md) (§7 migrations),
   [`frontend.md`](frontend.md), [`openapi-plan.md`](openapi-plan.md).
+
+---
+
+## 0. Implementation
+
+Shipped in PR #20. Better Auth on the Worker (`/api/auth/*`), Google provider,
+auth tables + `todos.owner_id` migration (anonymous rows dropped), owner-scoped
+queries + 401 envelope, SPA sign-in/out with a protected `/todos`. Dev-only
+email/password enabled outside production for tests. Google sign-in verified in
+production; secrets set for prod/staging/preview.
 
 ---
 

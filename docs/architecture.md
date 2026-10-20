@@ -353,8 +353,9 @@ rights, distinct from the interactive OAuth session used for local `wrangler`.
 Deliberately out of scope for the first milestone; each is revisited before it
 becomes a blocker.
 
-1. **Authentication / authorization** — ✅ decided (Better Auth + Google OAuth);
-   implementation tracked in KAN-13 and [`auth-plan.md`](auth-plan.md).
+1. **Authentication / authorization** — ✅ **implemented** (Better Auth + Google
+   OAuth, KAN-13): todos are per-user and owner-scoped; sessions are first-party
+   cookies. See [`auth-plan.md`](auth-plan.md).
 2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
    D1 + Drizzle is the intended choice when persistence is introduced.
 3. **Preview deployments** — per-PR Version URLs are wired up (see §12 and

@@ -44,6 +44,8 @@ backend, deployed to Cloudflare Workers.
 - **Auth plan:** see [`docs/auth-plan.md`](docs/auth-plan.md)
   (Google OAuth via Better Auth, per-user todos, tracking ticket **KAN-13**)
   and [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md) (GCP setup).
+- **Incident response:** see [`docs/incident-response.md`](docs/incident-response.md)
+  (severity, rollback, D1 recovery, comms).
 
 ## Verified CLI Access
 
