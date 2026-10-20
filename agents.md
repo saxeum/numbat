@@ -28,8 +28,9 @@ backend, deployed to Cloudflare Workers.
   D1/Drizzle, Vitest + Playwright) and the current open questions.
 - **Workflow plan:** see [`docs/workflow-plan.md`](docs/workflow-plan.md) for the
   branch/PR/CI hardening and the approval matrix.
-- **Production readiness:** see [`docs/production-readiness-plan.md`](docs/production-readiness-plan.md)
-  (mitigation plan) and [`docs/production-readiness-assessment.md`](docs/production-readiness-assessment.md)
+- **Production readiness:** see [`docs/production-readiness-review.md`](docs/production-readiness-review.md)
+  (current state — **ready for feature development**), [`docs/production-readiness-plan.md`](docs/production-readiness-plan.md)
+  (mitigation plan), and [`docs/production-readiness-assessment.md`](docs/production-readiness-assessment.md)
   (source assessment).
 - **Issue tracking:** Jira project **`KAN`** on `saxeum.atlassian.net` (via the
   Atlassian MCP server). Backlog tickets are referenced in the readiness plan §9.
