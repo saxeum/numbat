@@ -34,7 +34,7 @@ export function HomePage() {
         <h1 className="text-5xl font-semibold tracking-tight">numbat</h1>
         <p className="text-balance text-muted-foreground">
           A React SPA served by the web Worker, calling the Hono API on the same
-          origin.
+          origin. And I love fish.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Button asChild>
