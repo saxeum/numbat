@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { getHealth } from "@/lib/api";
@@ -37,8 +38,11 @@ export function HomePage() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Button asChild>
+            <Link to="/todos">Open todos</Link>
+          </Button>
+          <Button variant="outline" asChild>
             <a href="/api/health" target="_blank" rel="noreferrer">
-              View API response
+              API response
             </a>
           </Button>
           <Button variant="outline" asChild>

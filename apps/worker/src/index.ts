@@ -6,6 +6,7 @@ import { logger } from "./api/middleware/logger";
 import { requestId } from "./api/middleware/request-id";
 import { securityHeaders } from "./api/middleware/security";
 import { health } from "./api/routes/health";
+import { todos } from "./api/routes/todos";
 import type { AppEnv } from "./api/types";
 import { validateEnv } from "./config";
 
@@ -22,6 +23,7 @@ export function createApp() {
 
   const api = new OpenAPIHono<AppEnv>();
   api.route("/health", health);
+  api.route("/todos", todos);
   api.doc("/openapi.json", {
     openapi: "3.0.0",
     info: { title: "Numbat API", version: "1.0.0" },

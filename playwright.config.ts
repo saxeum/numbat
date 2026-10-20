@@ -7,6 +7,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 2 : 0,
+  timeout: 60_000,
+  // Low-memory dev machines can't run many browsers at once; CI can.
+  workers: CI ? undefined : 2,
   reporter: CI ? "github" : "list",
   use: {
     baseURL: "http://localhost:5173",

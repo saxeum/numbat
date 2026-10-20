@@ -1,6 +1,6 @@
 # numbat — Persistence Plan (D1 + Drizzle)
 
-- **Status:** In progress (Jira **KAN-10**)
+- **Status:** Implemented (Jira **KAN-10**; first entity via **KAN-12**)
 - **Date:** 2026-10-20
 - **Scope:** Introduce persistence (Cloudflare D1 + Drizzle) to the API Worker ahead
   of user-specific features. Architecture decision **D4**.
@@ -18,12 +18,12 @@ deployments keep working.
 
 | Step | Status |
 |---|---|
-| P1 Dependencies + config (drizzle-orm, drizzle-kit, D1 binding) | ☐ |
-| P2 Migrations directory + tooling (`drizzle-kit generate`) | ☐ |
-| P3 Local + test D1 (Miniflare, `applyD1Migrations`) | ☐ |
-| P4 Health check `database` field | ☐ |
-| P5 Environment isolation (preview/staging DB) | ☐ |
-| P6 First domain entity | ☐ (when a feature needs it) |
+| P1 Dependencies + config (drizzle-orm, drizzle-kit, D1 binding) | ✅ |
+| P2 Migrations directory + tooling (`drizzle-kit generate`) | ✅ `migrations/0000_todos.sql` |
+| P3 Local + test D1 (Miniflare, `applyD1Migrations`) | ✅ |
+| P4 Health check `database` field | ✅ |
+| P5 Environment isolation (preview/staging DB) | ✅ prod + preview + staging |
+| P6 First domain entity (`todos`) | ✅ KAN-12 |
 
 ---
 
@@ -93,11 +93,10 @@ Named environments hold their own DB:
 }
 ```
 
-> **Important:** the PR preview job currently runs `versions upload` against the
-> **default** (production) config, so preview API versions would share the prod
-> DB. Before any write endpoint exists, the preview job must target a `preview`
-> environment with its own DB (or previews must be read-only). This is a required
-> Phase 5 change — see `workflow-plan.md` W3.
+> **Resolved:** the PR preview job now runs
+> `versions upload --env preview`, so preview versions use the `numbat-api-preview`
+> Worker and `numbat-db-preview` — never the production DB. `main` also deploys
+> the API to the `staging` worker/DB. See `workflow-plan.md` W3.
 
 ## 5. Directory layout
 
@@ -247,7 +246,7 @@ Each phase ships through `verify` + a PR preview (`workflow-plan.md` W3).
 1. **Staging env now or later?** (Phase 5 could be prod+preview only.)
 2. **Preview isolation** — preview `env` with its own DB, or keep previews
    read-only until writes exist?
-3. **First entity** — what is the first real table (drives schema design)?
+3. **First entity:** ✅ **answered — `todos`** (single-user, anonymous; see KAN-12).
 4. **Seeding** — shared, committed dev seeds, or local-only?
 
 ## 14. Related tickets

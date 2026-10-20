@@ -7,5 +7,41 @@
   "preview_urls": true,
   "observability": { "enabled": true },
   "vars": { "ENVIRONMENT": "production", "APP_VERSION": "0.0.0" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "numbat-db",
+      "database_id": "7aa958b9-c747-417f-9273-a50221c21f16",
+      "migrations_dir": "migrations",
+    },
+  ],
   "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
+  "env": {
+    "staging": {
+      "name": "numbat-api-staging",
+      "vars": { "ENVIRONMENT": "staging", "APP_VERSION": "0.0.0" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "numbat-db-staging",
+          "database_id": "e3f36ab5-1ea6-4ea0-89f1-de52d3897323",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "routes": [],
+    },
+    "preview": {
+      "name": "numbat-api-preview",
+      "vars": { "ENVIRONMENT": "staging", "APP_VERSION": "0.0.0" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "numbat-db-preview",
+          "database_id": "ccbb09e4-ea7c-47c7-aaa3-b068215afe69",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "routes": [],
+    },
+  },
 }

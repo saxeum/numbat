@@ -5,7 +5,11 @@ import { AppError } from "../src/api/middleware/error";
 import { EnvSchema } from "../src/config";
 import { createApp } from "../src/index";
 
-const env = { ENVIRONMENT: "production", APP_VERSION: "0.0.0" } satisfies Env;
+const env = {
+  ENVIRONMENT: "production",
+  APP_VERSION: "0.0.0",
+  DB: {} as D1Database,
+} satisfies Env;
 
 describe("error envelope", () => {
   it("wraps unknown routes and echoes the request id", async () => {
