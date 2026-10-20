@@ -227,7 +227,22 @@ available per PR (`workflow-plan.md` W3).
 5. **Staging:** introduce a `preview`/staging environment now (pairs with W4/W7)
    or with D1?
 
-## 9. Explicit non-goals
+## 9. Backlog (Jira)
+
+Tracked in project **KAN** on `saxeum.atlassian.net`:
+
+| Ticket | Item |
+|---|---|
+| KAN-4 | [P1.2] Rate limiting for the public API |
+| KAN-5 | [P2.1] Load testing for API and SPA |
+| KAN-6 | [P2.2] Incident response & rollback runbook |
+| KAN-7 | [P2.3] Monitoring dashboards & SLOs |
+| KAN-8 | [Security] Enforce CSP (move off Report-Only) |
+| KAN-9 | [Observability] Adopt Sentry error tracking (deferred) |
+
+---
+
+## 10. Explicit non-goals
 
 - D1 + Drizzle, authentication, preview-isolated storage (deferred; prepared for
   via env schema, health DB hook, and `workflow-plan.md` W7).

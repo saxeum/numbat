@@ -30,6 +30,8 @@ backend, deployed to Cloudflare Workers.
 - **Production readiness:** see [`docs/production-readiness-plan.md`](docs/production-readiness-plan.md)
   (mitigation plan) and [`docs/production-readiness-assessment.md`](docs/production-readiness-assessment.md)
   (source assessment).
+- **Issue tracking:** Jira project **`KAN`** on `saxeum.atlassian.net` (via the
+  Atlassian MCP server). Backlog tickets are referenced in the readiness plan §9.
 
 ## Verified CLI Access
 
