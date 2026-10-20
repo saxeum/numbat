@@ -34,6 +34,8 @@ backend, deployed to Cloudflare Workers.
   Atlassian MCP server). Backlog tickets are referenced in the readiness plan §9.
 - **Persistence plan:** see [`docs/persistence-plan.md`](docs/persistence-plan.md)
   (D1 + Drizzle, tracking ticket **KAN-10**).
+- **Manual testing:** see [`docs/manual-testing-todos.md`](docs/manual-testing-todos.md)
+  for exercising the DB + todo feature across local/staging/preview/prod.
 
 ## Verified CLI Access
 
