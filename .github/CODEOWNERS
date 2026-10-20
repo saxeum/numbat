@@ -1,0 +1,11 @@
+# Default owners for everything in the repo.
+# Replace/augment with individual engineers or teams as domains emerge.
+# Syntax: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @gmtreacy
+
+# Suggested split once ownership develops (uncomment and fill in):
+# /apps/web/      @<web-owner>
+# /apps/worker/   @<api-owner>
+# /packages/shared/ @<contracts-owner>
+# /docs/          @<docs-owner>
