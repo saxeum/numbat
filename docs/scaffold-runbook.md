@@ -484,13 +484,24 @@ Run with `npm run test:e2e` (root script → `playwright test`).
 
 ## 9. CI/CD (GitHub Actions)
 
-`.github/workflows/ci.yml` outline:
+`.github/workflows/ci.yml` (two jobs):
 
-- **On PR / push:** checkout → `setup-node` (cache npm) → `npm ci` →
-  `npm run typecheck` → `npm test` → `npm run build`.
-- **On push to `main`:** after tests, deploy both Workers with
-  `cloudflare/wrangler-action@v3` using a **matrix** over `worker` and `web`,
-  setting `workingDirectory: apps/<app>` and `command: deploy`.
+- **`verify`** (PR + push): checkout → `actions/setup-node@v4` (cache `npm`,
+  `node-version: 24`) → `npm ci` → `npm run typecheck` → `npm test` →
+  `npm run build` → `npx playwright install --with-deps chromium` →
+  `npm run test:e2e`.
+- **`deploy`** (push to `main` only, `needs: verify`): matrix over
+  `[worker, web]` with `cloudflare/wrangler-action@v3`,
+  `workingDirectory: apps/<app>`, `command: deploy`. The **web** leg runs
+  `npm run build -w apps/web` first — `wrangler-action` calls `wrangler deploy`
+  directly and does **not** run the npm `deploy` script (which would build).
+
+> **npm install scripts in CI.** npm 11 blocks dependency install scripts
+> (`esbuild` / `workerd` postinstall) unless approved, which breaks `npm ci` and
+> the test run. `package.json` therefore carries an `allowScripts` map
+> (`{ "esbuild": true, "workerd": true }`). Regenerate (unpinned) with
+> `npm install-scripts approve --no-allow-scripts-pin esbuild workerd` whenever a
+> dependency with a native postinstall is added.
 
 Required repo secrets:
 
