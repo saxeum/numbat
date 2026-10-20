@@ -399,34 +399,44 @@ Open http://localhost:5173. Secrets go in each app's `.dev.vars` (gitignored).
 
 ## 8. Testing
 
-### 8.1 Worker integration tests (Vitest + Workers pool)
+### 8.1 Worker integration tests (Vitest + Workers plugin)
+
+> **`@cloudflare/vitest-pool-workers` is deprecated** — it was renamed to
+> **`@cloudflare/vitest-plugin`**, which is a plain Vite plugin (no `/config`
+> subpath, no `defineWorkersConfig`). Use the new package.
 
 ```bash
-npm install -w apps/worker -D vitest@~4.1.12 @cloudflare/vitest-pool-workers@~0.23.0
+npm install -w apps/worker -D @cloudflare/vitest-plugin@~1.4.5 vitest@~4.1.12
 ```
 
 `apps/worker/vitest.config.ts`:
 
 ```ts
-// illustrative
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-plugin";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
-  test: {
-    poolOptions: {
-      workers: { wrangler: { configPath: "./wrangler.jsonc" } }
-    }
-  }
+export default defineConfig({
+  plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
 });
 ```
+
+Also add the plugin's ambient `cloudflare:test` types to
+`apps/worker/tsconfig.json`:
+
+```jsonc
+"types": ["./worker-configuration.d.ts", "node", "@cloudflare/vitest-plugin/types"]
+```
+
+Add a `"test": "vitest run"` script so root `npm test --workspaces` picks it up,
+and a test using `SELF.fetch(...)` from `cloudflare:test` (e.g.
+`apps/worker/test/health.test.ts`) to exercise the real Worker entry.
 
 Tests run inside `workerd` with real bindings, so Hono routes and (later) D1 are
 exercised for real.
 
-> **Version caution:** `@cloudflare/vitest-pool-workers@0.23.0` declares peer
-> `vitest: ^4.1.0` (plus `@vitest/runner` / `@vitest/snapshot` `^4.1.0`). Vitest
-> `latest` is currently **5.x**, which the pool does **not** accept — pin
-> `vitest@~4.1.12`. Do not float to Vitest 5 until the pool widens its peer range.
+> **Version caution:** `@cloudflare/vitest-plugin@1.4.5` declares peer
+> `vitest: ^4.1.0 || ^5.0.0`. We pin `vitest@~4.1.12` (the LTS-style `V4` tag);
+> Vitest 5 is allowed by the plugin if you want to move later.
 
 ### 8.2 End-to-end (Playwright)
 
@@ -507,10 +517,11 @@ Status as of the 2026-10-19 scaffold:
   at the root is the workspace source of truth.
 - **Keep `compatibility_date` identical** in both `wrangler.jsonc` files and bump
   them together.
-- **Zod** is standardized on v4 (`^4.6`) and **Vitest is pinned to `~4.1.12`** to
-  satisfy `@cloudflare/vitest-pool-workers@0.23.0` (peer `^4.1.0`). These are the
-  two most likely sources of install friction (§4, §8.1) — resolve those first if
-  `npm ci` complains.
+- **Zod** is standardized on v4 (`^4.6`) and **Vitest is pinned to `~4.1.12`**
+  with the Workers test integration being **`@cloudflare/vitest-plugin`**
+  (`@cloudflare/vitest-pool-workers` is deprecated) — see §8.1. These are the most
+  likely sources of install friction (§4, §8.1) — resolve those first if `npm ci`
+  complains.
 - **TypeScript 7 removed `baseUrl`** — declare path aliases with `paths` alone
   (`"@/*": ["./src/*"]`), resolved relative to the tsconfig file, and mirror the
   alias in `vite.config.ts`. The runbook's older `baseUrl` guidance is superseded.
