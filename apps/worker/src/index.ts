@@ -1,12 +1,38 @@
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { Hono } from "hono";
 
+import { errorHandler, notFoundHandler } from "./api/middleware/error";
+import { logger } from "./api/middleware/logger";
+import { requestId } from "./api/middleware/request-id";
+import { securityHeaders } from "./api/middleware/security";
 import { health } from "./api/routes/health";
+import type { AppEnv } from "./api/types";
+import { validateEnv } from "./config";
 
-const app = new Hono<{ Bindings: Env }>();
+export function createApp() {
+  const app = new Hono<AppEnv>();
 
-const api = new Hono<{ Bindings: Env }>();
-api.route("/health", health);
+  app.use("*", async (c, next) => {
+    validateEnv(c.env);
+    await next();
+  });
+  app.use("*", requestId());
+  app.use("*", securityHeaders());
+  app.use("*", logger());
 
-app.route("/api", api);
+  const api = new OpenAPIHono<AppEnv>();
+  api.route("/health", health);
+  api.doc("/openapi.json", {
+    openapi: "3.0.0",
+    info: { title: "Numbat API", version: "1.0.0" },
+  });
 
-export default app;
+  app.route("/api", api);
+
+  app.notFound(notFoundHandler);
+  app.onError(errorHandler);
+
+  return app;
+}
+
+export default createApp();

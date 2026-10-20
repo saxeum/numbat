@@ -6,5 +6,6 @@
   "workers_dev": true,
   "preview_urls": true,
   "observability": { "enabled": true },
+  "vars": { "ENVIRONMENT": "production", "APP_VERSION": "0.0.0" },
   "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
 }

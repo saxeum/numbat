@@ -26,7 +26,10 @@ backend, deployed to Cloudflare Workers.
   accepted design (two Workers on `foonix.net` — static-assets SPA + Hono API,
   D1/Drizzle, Vitest + Playwright) and the current open questions.
 - **Workflow plan:** see [`docs/workflow-plan.md`](docs/workflow-plan.md) for the
-  proposed branch/PR/CI hardening and the approval matrix.
+  branch/PR/CI hardening and the approval matrix.
+- **Production readiness:** see [`docs/production-readiness-plan.md`](docs/production-readiness-plan.md)
+  (mitigation plan) and [`docs/production-readiness-assessment.md`](docs/production-readiness-assessment.md)
+  (source assessment).
 
 ## Verified CLI Access
 

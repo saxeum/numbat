@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development (gitignored).
+ENVIRONMENT=development

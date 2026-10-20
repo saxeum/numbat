@@ -1,0 +1,46 @@
+name: main guard
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  guard:
+    name: direct push check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.sha;
+
+            const { data: pulls } =
+              await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner,
+                repo,
+                commit_sha: sha,
+              });
+
+            if (pulls.some((p) => p.merged_at)) {
+              core.info(`Commit ${sha} came from a merged PR — OK.`);
+              return;
+            }
+
+            const title = `Direct push to main detected (${sha.slice(0, 7)})`;
+            const body = [
+              'The `main guard` workflow found no associated merged pull request for this push to `main`.',
+              '',
+              `- Commit: \`${sha}\``,
+              `- Actor: \`${context.actor}\``,
+              '',
+              'Per `docs/workflow-plan.md` (Option C), changes to `main` should land through a reviewed PR. This check is advisory — GitHub Free cannot enforce branch protection on a private repo.',
+            ].join('\n');
+
+            await github.rest.issues.create({ owner, repo, title, body });
+            core.warning(title);

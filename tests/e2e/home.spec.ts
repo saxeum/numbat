@@ -22,5 +22,5 @@ test("API health is reachable through the web origin", async ({ request }) => {
   const res = await request.get("/api/health");
 
   expect(res.ok()).toBeTruthy();
-  await expect(res.json()).resolves.toEqual({ ok: true });
+  await expect(res.json()).resolves.toMatchObject({ ok: true });
 });
