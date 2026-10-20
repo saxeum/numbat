@@ -17,6 +17,9 @@ Guidance for AI agents working in this repository.
 
 ## Project
 
+> **Baseline tag `v0.1.0`:** infrastructure is complete; fork the repo and check
+> out this tag to start a new product. See [`docs/baseline.md`](docs/baseline.md).
+
 `numbat` — TypeScript application with a React SPA frontend and a REST API
 backend, deployed to Cloudflare Workers.
 
