@@ -56,22 +56,35 @@ the overall model.
 
 ## 4. Workstreams
 
-### W1 — Protect `main` (G1, G2)
+### W1 — Protect `main` (G1, G2) — **deferred; adopting Option C**
 
-Use GitHub **Rulesets** (Settings → Rules → Rulesets), targeting `main`:
+> **Decision (2026-10-20):** GitHub Free does not enforce rulesets / branch
+> protection on **private** org repositories — that requires GitHub **Team** (or a
+> public repo). We are **not** upgrading, so W1's hard gate is deferred. This is
+> an accepted risk.
+>
+> We adopt **Option C — honor-system + compensating controls**:
+> - CI (`verify`) still runs on every PR and is visible; review discipline is the
+>   effective gate.
+> - Merge settings kept manual: squash-merge, delete the branch after merge.
+> - Candidate follow-up: a **"main guard" workflow** that runs on `push` to
+>   `main`, flags commits not originating from a merged PR, and opens an issue
+>   (advisory only — it cannot block a merge).
+>
+> Revisit if the org moves to GitHub Team or the repo becomes public. The desired
+> ruleset config is recorded below for that point.
+
+**Target config (when enforceable):** GitHub **Rulesets** targeting `main`:
 
 - Require a pull request before merging.
-- Require **status checks** to pass: `typecheck · test · build` (the `verify`
-  job). Also require branch **up to date** before merge.
+- Require status checks `typecheck · test · build` (the `verify` job); branch
+  **up to date** before merge.
 - Require **≥ 1 approval**; dismiss stale approvals on new commits.
 - Require conversation resolution.
 - Block force-push and branch deletion; require linear history.
 
 Repository merge settings: enable **squash merge**, disable merge/rebase commits,
 auto-delete head branches.
-
-**Approver:** repo admin. Candidate for automation via `gh api`
-(`/repos/{owner}/{repo}/rulesets`) once approved.
 
 ### W2 — Full CI gate (G5, G6)
 
@@ -155,7 +168,7 @@ agent-doable.
 
 | Phase | Contents | Effort | Blocked on |
 |-------|----------|--------|-----------|
-| **P0** | W1 ruleset + required check; W6 confirm token scopes already set | hours | repo admin |
+| **P0** | W1 ruleset — **deferred** (GitHub Free; Option C adopted, §4). W6 token scopes already set | — | plan upgrade or public repo |
 | **P1** | W2 lint/format + `paths-ignore`; W5 `CODEOWNERS` + PR template + `CONTRIBUTING.md`; W4 rollback runbook | 1–2 days | normal review |
 | **P2** | W3 per-PR preview URLs (+ comment on PR) | 1–2 days | previews enabled + token |
 | **P3** | W4 staging env; W7 D1/migrations when persistence starts | with D4 | eng + Cloudflare |
@@ -164,8 +177,9 @@ agent-doable.
 
 | Item | Owner of approval |
 |------|-------------------|
-| Rulesets / `main` protection (W1) | Repo admin |
-| Required status checks (W1) | Repo admin |
+| Rulesets / `main` protection (W1) | **Deferred** — needs GitHub Team upgrade or a public repo (Option C adopted) |
+| Required status checks (W1) | **Deferred** — same |
+| "main guard" workflow (W1, Option C) | None — agent-implementable, advisory only |
 | Lint/format in CI (W2) | None — PR review only |
 | `paths-ignore` (W2) | None — PR review only |
 | Enable preview URLs / new token scopes (W3, W6) | Cloudflare dashboard |
