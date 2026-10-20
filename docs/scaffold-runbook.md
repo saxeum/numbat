@@ -442,11 +442,43 @@ exercised for real.
 
 ```bash
 npm install -D @playwright/test
-npx playwright install --with-deps chromium
+npx playwright install chromium         # NOT --with-deps on Arch (apt-based)
 ```
 
-`playwright.config.ts` (repo root) with a `webServer` array that starts both the
-API Worker and the web preview, then run tests in `tests/e2e/`.
+> **Arch Linux:** `--with-deps` drives `apt-get` and fails. Playwright also warns
+> the OS is unsupported and downloads the `ubuntu24.04-x64` fallback build; the
+> headless shell runs if the required system libs are already present. If not,
+> install them via `pacman`.
+
+`playwright.config.ts` (repo root) starts both servers via a `webServer` array and
+points tests at the Vite origin:
+
+```ts
+export default defineConfig({
+  testDir: "./tests/e2e",
+  use: { baseURL: "http://localhost:5173" },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: [
+    {
+      command: "npm run dev -w apps/worker -- --port 8787",
+      url: "http://localhost:8787/api/health",
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npm run dev -w apps/web -- --port 5173 --strictPort",
+      url: "http://localhost:5173",
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
+});
+```
+
+Run with `npm run test:e2e` (root script → `playwright test`).
+
+> **Deep-link fallback needs a catch-all route.** The server correctly returns the
+> SPA shell (`200`) for unknown paths, but React Router renders its *default error
+> boundary* unless the app declares a `path: "*"` route. Add a `NotFoundPage` +
+> catch-all so the fallback test asserts real app content.
 
 ---
 
@@ -487,7 +519,7 @@ without a custom workflow — adopt it only if it covers the test gates you want
 Status as of the 2026-10-19 scaffold:
 
 - [x] `npm run typecheck` clean across workspaces
-- [ ] Unit/integration tests pass (`npm test`) — tests not scaffolded yet (§8)
+- [x] Unit/integration tests pass (`npm test`) — Worker tests inside `workerd`; E2E via `npm run test:e2e`
 - [x] `npm run build` produces `apps/web/dist`
 - [x] `wrangler deploy --dry-run` succeeds in both apps
 - [x] `dig +short foonix.net` resolves

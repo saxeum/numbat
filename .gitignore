@@ -36,6 +36,12 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
+# Playwright
+playwright-report/
+blob-report/
+test-results/
+playwright/.cache/
+
 # Caches
 .cache/
 .tmp/
