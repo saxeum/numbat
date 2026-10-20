@@ -13,6 +13,9 @@ const env = {
   GOOGLE_CLIENT_ID: "test-client-id",
   GOOGLE_CLIENT_SECRET: "test-client-secret",
   DB: {} as D1Database,
+  API_RATE_LIMITER: {
+    limit: async () => ({ success: true }),
+  } as unknown as RateLimit,
 } satisfies Env;
 
 describe("error envelope", () => {

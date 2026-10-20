@@ -57,6 +57,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Todo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     post:
       operationId: createTodo
       tags: [todos]
@@ -78,6 +82,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /todos/{id}:
     parameters:
       - $ref: "#/components/parameters/TodoId"
@@ -102,6 +108,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -113,6 +121,8 @@ paths:
           description: Deleted
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
         "404":
           $ref: "#/components/responses/NotFound"
 components:
@@ -133,6 +143,12 @@ components:
   responses:
     Unauthorized:
       description: No valid session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: Rate limit exceeded
       content:
         application/json:
           schema:

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import openapi from "../openapi.json";
 import { errorHandler, notFoundHandler } from "./api/middleware/error";
 import { logger } from "./api/middleware/logger";
+import { rateLimit } from "./api/middleware/rate-limit";
 import { requestId } from "./api/middleware/request-id";
 import { securityHeaders } from "./api/middleware/security";
 import { health } from "./api/routes/health";
@@ -24,6 +25,9 @@ export function createApp() {
   app.use("*", logger());
 
   const api = new Hono<AppEnv>();
+
+  // Rate limit the whole API surface (generous: 120 req/min/IP per location).
+  api.use("*", rateLimit);
 
   // Better Auth handler (library-owned routes; not part of our OpenAPI spec).
   api.all("/auth/*", (c) => createAuth(c.env).handler(c.req.raw));

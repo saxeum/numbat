@@ -21,11 +21,6 @@ export const Todo = z
   .passthrough();
 export type Todo = z.infer<typeof Todo>;
 
-export const CreateTodoRequest = z.object({
-  title: z.string().min(1).max(200),
-});
-export type CreateTodoRequest = z.infer<typeof CreateTodoRequest>;
-
 export const ErrorResponse = z
   .object({
     error: z
@@ -39,6 +34,11 @@ export const ErrorResponse = z
   })
   .passthrough();
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
+
+export const CreateTodoRequest = z.object({
+  title: z.string().min(1).max(200),
+});
+export type CreateTodoRequest = z.infer<typeof CreateTodoRequest>;
 
 export const UpdateTodoRequest = z
   .object({ title: z.string().min(1).max(200), completed: z.boolean() })
