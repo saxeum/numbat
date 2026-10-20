@@ -95,10 +95,10 @@ migration back; you ship a corrective one. For bad data:
 
 | Date | What | Result |
 |------|------|--------|
-| 2026-10-20 | Confirm commands (`wrangler versions list`, `rollback`, `d1 execute`) | _to rehearse against a real bad version_ |
+| 2026-10-20 | `wrangler rollback --name numbat-api-staging` | ✅ rolled back to the previous version (`ff070908…`); `/api/health` healthy afterwards. Reverted to latest on the next `main` deploy. |
 
-> Rehearse at least rollback once on `numbat-api-staging` and record the result
-> here — an untested rollback is not a rollback.
+> Rehearsed once (staging). Re-run after major changes — an untested rollback is
+> not a rollback.
 
 ## 9. Checklist (copy into the incident issue)
 
