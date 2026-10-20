@@ -33,10 +33,12 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
-      - name: Dependency audit (non-blocking)
-        continue-on-error: true
+      # Production dependency audit as a real gate. Dev-only advisories (the
+      # shadcn CLI chain, drizzle-kit's esbuild) are excluded and tracked
+      # separately — see KAN-17.
+      - name: Dependency audit (production)
         run: npm audit --omit=dev
 
       - name: OpenAPI spec lint
@@ -91,7 +93,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Build web assets
         run: npm run build -w apps/web
@@ -175,7 +177,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Build web assets
         if: matrix.app == 'web'
