@@ -35,11 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      # Production dependency audit as a real gate. Dev-only advisories (the
-      # shadcn CLI chain, drizzle-kit's esbuild) are excluded and tracked
-      # separately — see KAN-17.
+      # Fail on high/critical advisories in the production tree. Moderate
+      # advisories from dev tools wired in as optional peers (better-auth ->
+      # drizzle-kit -> esbuild) are not bundled and don't gate. See KAN-17.
       - name: Dependency audit (production)
-        run: npm audit --omit=dev
+        run: npm audit --omit=dev --audit-level=high
 
       - name: OpenAPI spec lint
         run: npm run api:lint
@@ -65,6 +65,17 @@ jobs:
       - name: Apply D1 migrations (local dev DB)
         working-directory: apps/worker
         run: npx wrangler d1 migrations apply numbat-db --local
+
+      # Test-only auth env for the E2E `wrangler dev` (enables dev sign-in).
+      - name: Write test auth env for E2E
+        run: |
+          cat > apps/worker/.dev.vars <<'EOF'
+          ENVIRONMENT=development
+          BETTER_AUTH_URL=http://localhost:5173
+          BETTER_AUTH_SECRET=test-secret-test-secret-test-secret
+          GOOGLE_CLIENT_ID=test-client-id
+          GOOGLE_CLIENT_SECRET=test-client-secret
+          EOF
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

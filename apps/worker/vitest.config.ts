@@ -6,7 +6,16 @@ export default defineConfig({
     cloudflareTest(async () => ({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
-        bindings: { TEST_MIGRATIONS: await readD1Migrations("./migrations") },
+        bindings: {
+          TEST_MIGRATIONS: await readD1Migrations("./migrations"),
+          // Test-only auth config: dev env enables email/password sign-in so
+          // tests can authenticate deterministically (Google can't be automated).
+          ENVIRONMENT: "development",
+          BETTER_AUTH_URL: "http://localhost:5173",
+          BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret",
+          GOOGLE_CLIENT_ID: "test-client-id",
+          GOOGLE_CLIENT_SECRET: "test-client-secret",
+        },
       },
     })),
   ],

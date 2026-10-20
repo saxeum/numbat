@@ -9,6 +9,7 @@ import { securityHeaders } from "./api/middleware/security";
 import { health } from "./api/routes/health";
 import { todos } from "./api/routes/todos";
 import type { AppEnv } from "./api/types";
+import { createAuth } from "./auth";
 import { validateEnv } from "./config";
 
 export function createApp() {
@@ -23,6 +24,10 @@ export function createApp() {
   app.use("*", logger());
 
   const api = new Hono<AppEnv>();
+
+  // Better Auth handler (library-owned routes; not part of our OpenAPI spec).
+  api.all("/auth/*", (c) => createAuth(c.env).handler(c.req.raw));
+
   api.route("/health", health);
   api.route("/todos", todos);
   // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.

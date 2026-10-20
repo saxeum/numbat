@@ -13,8 +13,10 @@ servers:
     description: Production
   - url: https://numbat-api-staging.<account-subdomain>.workers.dev/api
     description: Staging
-# Public API: no auth yet (deferred — architecture D10).
-security: []
+# Everything requires a session except endpoints that opt out (e.g. /health).
+# Auth routes live under /api/auth/* (Better Auth) and are not part of this spec.
+security:
+  - sessionCookie: []
 tags:
   - name: system
     description: Service metadata
@@ -27,6 +29,7 @@ paths:
       tags: [system]
       summary: Service health
       description: Liveness/readiness, including a database probe.
+      security: [] # public
       responses:
         "200":
           description: Service is healthy
@@ -73,6 +76,8 @@ paths:
                 $ref: "#/components/schemas/Todo"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /todos/{id}:
     parameters:
       - $ref: "#/components/parameters/TodoId"
@@ -95,6 +100,8 @@ paths:
                 $ref: "#/components/schemas/Todo"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -104,9 +111,17 @@ paths:
       responses:
         "204":
           description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: Better Auth session cookie (first-party, same-origin).
   parameters:
     TodoId:
       name: id
@@ -116,6 +131,12 @@ components:
       schema:
         $ref: "#/components/schemas/TodoId"
   responses:
+    Unauthorized:
+      description: No valid session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     BadRequest:
       description: Invalid input
       content:

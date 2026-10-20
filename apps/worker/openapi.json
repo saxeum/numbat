@@ -15,7 +15,11 @@
       "description": "Staging"
     }
   ],
-  "security": [],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
   "tags": [
     {
       "name": "system",
@@ -35,6 +39,7 @@
         ],
         "summary": "Service health",
         "description": "Liveness/readiness, including a database probe.",
+        "security": [],
         "responses": {
           "200": {
             "description": "Service is healthy",
@@ -111,6 +116,9 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       }
@@ -151,6 +159,9 @@
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
@@ -166,6 +177,9 @@
           "204": {
             "description": "Deleted"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
@@ -174,6 +188,14 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "better-auth.session_token",
+        "description": "Better Auth session cookie (first-party, same-origin)."
+      }
+    },
     "parameters": {
       "TodoId": {
         "name": "id",
@@ -186,6 +208,16 @@
       }
     },
     "responses": {
+      "Unauthorized": {
+        "description": "No valid session",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "BadRequest": {
         "description": "Invalid input",
         "content": {

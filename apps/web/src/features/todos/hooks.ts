@@ -6,8 +6,8 @@ import * as api from "./api";
 
 export const todosKey = ["todos"] as const;
 
-export function useTodos() {
-  return useQuery({ queryKey: todosKey, queryFn: api.listTodos });
+export function useTodos(enabled = true) {
+  return useQuery({ queryKey: todosKey, queryFn: api.listTodos, enabled });
 }
 
 export function useCreateTodo() {

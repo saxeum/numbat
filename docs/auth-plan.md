@@ -151,6 +151,7 @@ registered. Consequence:
 
 ## 13. References
 
+- Google OAuth client setup (step-by-step): [`google-oauth-setup.md`](google-oauth-setup.md)
 - Better Auth — Hono: https://www.better-auth.com/docs/integrations/hono
 - Better Auth — Drizzle adapter: https://www.better-auth.com/docs/adapters/drizzle
 - Better Auth — Google: https://www.better-auth.com/docs/authentication/google

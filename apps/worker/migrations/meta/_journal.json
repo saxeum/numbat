@@ -8,6 +8,13 @@
       "when": 1792462734032,
       "tag": "0000_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792475770445,
+      "tag": "0001_auth_and_todo_owner",
+      "breakpoints": true
     }
   ]
 }

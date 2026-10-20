@@ -1,10 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-test("todo: create, edit, complete, filter, delete", async ({ page }) => {
+test("todo: sign in, create, edit, complete, filter, delete", async ({
+  page,
+}) => {
   const title = `buy milk ${Date.now()}`;
   const edited = `${title} 2L`;
 
   await page.goto("/todos");
+
+  // Sign in via the dev credential form (Google OAuth can't be automated).
+  await page.getByLabel("Email").fill(`e2e-${Date.now()}@example.com`);
+  await page.getByLabel("Password").fill("password1234");
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  await expect(page.getByLabel("New todo")).toBeVisible();
 
   // create
   await page.getByLabel("New todo").fill(title);

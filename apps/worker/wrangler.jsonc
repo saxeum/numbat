@@ -6,7 +6,11 @@
   "workers_dev": true,
   "preview_urls": true,
   "observability": { "enabled": true },
-  "vars": { "ENVIRONMENT": "production", "APP_VERSION": "0.0.0" },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "APP_VERSION": "0.0.0",
+    "BETTER_AUTH_URL": "https://foonix.net",
+  },
   "d1_databases": [
     {
       "binding": "DB",

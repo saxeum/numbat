@@ -8,6 +8,10 @@ import { createApp } from "../src/index";
 const env = {
   ENVIRONMENT: "production",
   APP_VERSION: "0.0.0",
+  BETTER_AUTH_URL: "http://localhost:5173",
+  BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret",
+  GOOGLE_CLIENT_ID: "test-client-id",
+  GOOGLE_CLIENT_SECRET: "test-client-secret",
   DB: {} as D1Database,
 } satisfies Env;
 

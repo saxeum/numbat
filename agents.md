@@ -6,6 +6,7 @@ Guidance for AI agents working in this repository.
 
 1. **Do not write code unless explicitly asked to do so.** No new files, edits, refactors, or generated code beyond what was requested.
 2. **Do not commit code unless explicitly asked to do so.** Never run `git commit`, `git push`, or create commits/branches on your own.
+3. **Docs-only changes skip the PR.** Once a change is explicitly requested, commit documentation (`docs/**`, `*.md`, README/agents) **directly to `main`** and let it ride along in the **next real (code) PR** — do not open a PR solely for docs. Don't push `main` directly; unpushed doc commits are included when the next feature branch is cut from `main`.
 
 ## Additional Expectations
 
@@ -41,7 +42,8 @@ backend, deployed to Cloudflare Workers.
 - **OpenAPI plan:** see [`docs/openapi-plan.md`](docs/openapi-plan.md)
   (spec-first `openapi.yaml` + codegen + Swagger UI, tracking ticket **KAN-16**).
 - **Auth plan:** see [`docs/auth-plan.md`](docs/auth-plan.md)
-  (Google OAuth via Better Auth, per-user todos, tracking ticket **KAN-13**).
+  (Google OAuth via Better Auth, per-user todos, tracking ticket **KAN-13**)
+  and [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md) (GCP setup).
 
 ## Verified CLI Access
 

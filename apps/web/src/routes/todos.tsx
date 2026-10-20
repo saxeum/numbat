@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router";
 
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/features/auth/client";
+import { SignIn } from "@/features/auth/components/sign-in";
+import { UserMenu } from "@/features/auth/components/user-menu";
 import { TodoEmpty } from "@/features/todos/components/todo-empty";
 import {
   TodoFilters,
@@ -13,8 +16,21 @@ import { useClearCompleted, useTodos } from "@/features/todos/hooks";
 
 export function TodosPage() {
   const [filter, setFilter] = useState<TodoFilter>("all");
-  const todos = useTodos();
+  const { data: session, isPending } = useSession();
+  const todos = useTodos(Boolean(session));
   const clearCompleted = useClearCompleted();
+
+  if (isPending) {
+    return (
+      <main className="grid min-h-svh place-items-center bg-background px-6 text-foreground">
+        <p className="text-muted-foreground">Loading…</p>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return <SignIn />;
+  }
 
   const items = todos.data ?? [];
   const active = items.filter((todo) => !todo.completed).length;
@@ -29,11 +45,14 @@ export function TodosPage() {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col gap-6 px-6 py-16">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold tracking-tight">Todos</h1>
-        <Button variant="outline" asChild>
-          <Link to="/">Home</Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" asChild>
+            <Link to="/">Home</Link>
+          </Button>
+          <UserMenu />
+        </div>
       </header>
 
       <TodoForm />
