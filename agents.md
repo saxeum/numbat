@@ -32,6 +32,8 @@ backend, deployed to Cloudflare Workers.
   (source assessment).
 - **Issue tracking:** Jira project **`KAN`** on `saxeum.atlassian.net` (via the
   Atlassian MCP server). Backlog tickets are referenced in the readiness plan §9.
+- **Persistence plan:** see [`docs/persistence-plan.md`](docs/persistence-plan.md)
+  (D1 + Drizzle, tracking ticket **KAN-10**).
 
 ## Verified CLI Access
 
