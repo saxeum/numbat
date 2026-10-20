@@ -1,12 +1,27 @@
 # numbat — Todo UI Plan (single-user, full CRUD)
 
-- **Status:** Proposed
+- **Status:** Implemented (KAN-15)
 - **Date:** 2026-10-20
 - **Ticket:** Jira **KAN-15** (epic KAN-11; relates to KAN-12 API, KAN-13 auth)
 - **Scope:** A clean, usable todo UI for a single anonymous user — full CRUD — on
   top of the **existing** `/api/todos` API. **No auth, no backend changes.**
 - **Companions:** [`frontend.md`](frontend.md), [`persistence-plan.md`](persistence-plan.md)
   (§11 Phase 6), [`manual-testing-todos.md`](manual-testing-todos.md).
+
+---
+
+## 0. Progress
+
+| Phase | Status |
+|-------|--------|
+| 1 Feature folder (`src/features/todos`) + hooks | ✅ |
+| 2 Full CRUD incl. inline edit + states | ✅ |
+| 3 Filters, counts, clear-completed, toasts (Sonner, delete+undo) | ✅ |
+| 4 E2E (create → edit → complete → filter → delete) | ✅ |
+
+Decisions applied: U1 inline edit, U2 delete + undo, U3 toggle filters,
+U4 clear-completed, U5 toggle/delete optimistic + create/edit pessimistic,
+U6 Sonner.
 
 ---
 
