@@ -23,9 +23,11 @@ backend, deployed to Cloudflare Workers.
 - **Source of truth:** GitHub. Code lives under the personal account `gmtreacy`
   or the `saxeum` organization. This repo: **`saxeum/numbat`**.
 - **Deployment target:** Cloudflare Workers (via Wrangler).
-- **Architecture:** see [`docs/architecture.md`](docs/architecture.md) for the
-  accepted design (two Workers on `foonix.net` — static-assets SPA + Hono API,
-  D1/Drizzle, Vitest + Playwright) and the current open questions.
+- **Architecture:** see [`docs/architecture-tech-stack-review.md`](docs/architecture-tech-stack-review.md)
+  for a comprehensive review of the implemented architecture and tech stack
+  (current state), and [`docs/architecture.md`](docs/architecture.md) for the
+  original design decisions (two Workers on `foonix.net` — static-assets SPA +
+  Hono API, D1/Drizzle, Vitest + Playwright).
 - **Workflow plan:** see [`docs/workflow-plan.md`](docs/workflow-plan.md) for the
   branch/PR/CI hardening and the approval matrix.
 - **Production readiness:** see [`docs/production-readiness-review.md`](docs/production-readiness-review.md)
