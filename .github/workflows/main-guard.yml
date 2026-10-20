@@ -19,27 +19,46 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const sha = context.sha;
+            const subject = (context.payload.head_commit?.message ?? "").split("\n")[0];
 
-            const { data: pulls } =
-              await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                owner,
-                repo,
-                commit_sha: sha,
-              });
+            // GitHub's squash/merge commits reference their PR in the subject
+            // ("feat: thing (#123)" / "Merge pull request #123 from ..."). Trust
+            // that first — it avoids a race where the commit→PR association is
+            // not yet available right after a merge (see closed issue #7).
+            const looksMerged =
+              /\(#\d+\)\s*$/.test(subject) || /^Merge pull request #\d+/.test(subject);
+            if (looksMerged) {
+              core.info(`Commit ${sha} subject references a PR merge — OK (${subject}).`);
+              return;
+            }
 
-            if (pulls.some((p) => p.merged_at)) {
-              core.info(`Commit ${sha} came from a merged PR — OK.`);
+            // Otherwise fall back to the API, with a short retry to absorb the
+            // association race.
+            let merged = false;
+            for (let attempt = 1; attempt <= 5 && !merged; attempt++) {
+              const { data: pulls } =
+                await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner,
+                  repo,
+                  commit_sha: sha,
+                });
+              merged = pulls.some((p) => p.merged_at);
+              if (!merged) await new Promise((resolve) => setTimeout(resolve, 4000));
+            }
+            if (merged) {
+              core.info(`Commit ${sha} is associated with a merged PR — OK.`);
               return;
             }
 
             const title = `Direct push to main detected (${sha.slice(0, 7)})`;
             const body = [
-              'The `main guard` workflow found no associated merged pull request for this push to `main`.',
+              'The `main guard` workflow found no indication this push to `main` came through a reviewed PR.',
               '',
               `- Commit: \`${sha}\``,
+              `- Subject: ${subject || "_(none)_"}`,
               `- Actor: \`${context.actor}\``,
               '',
-              'Per `docs/workflow-plan.md` (Option C), changes to `main` should land through a reviewed PR. This check is advisory — GitHub Free cannot enforce branch protection on a private repo.',
+              'Per `docs/workflow-plan.md` (Option C), changes to `main` should land through a PR. This check is advisory — GitHub Free cannot enforce branch protection on a private repo.',
             ].join('\n');
 
             await github.rest.issues.create({ owner, repo, title, body });
