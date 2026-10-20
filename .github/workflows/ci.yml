@@ -114,7 +114,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/web
-          command: versions upload --preview-alias pr-${{ github.event.number }}
+          # Preview SPA uses the `preview` env, whose service binding points at the
+          # API preview (isolated DB) — see KAN-14.
+          command: versions upload --env preview --preview-alias pr-${{ github.event.number }}
 
       - name: Comment preview URLs
         uses: actions/github-script@v9

@@ -1,12 +1,23 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "numbat-web",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-10-19",
   "workers_dev": true,
   "preview_urls": true,
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
   },
+  "services": [{ "binding": "API", "service": "numbat-api" }],
   "routes": [{ "pattern": "foonix.net", "custom_domain": true }],
+  "env": {
+    "preview": {
+      "name": "numbat-web-preview",
+      // Preview SPA talks to the isolated API preview (never production).
+      "services": [{ "binding": "API", "service": "numbat-api-preview" }],
+      "routes": [],
+    },
+  },
 }

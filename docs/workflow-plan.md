@@ -118,10 +118,11 @@ preview D1).
 > API. Both Workers have now been deployed with it, so `versions upload` prints
 > the URLs and they resolve. Re-deploy if the setting ever flips back.
 
-> **Known limitation:** the web preview calls `/api/*` on its own origin, which
-> serves the SPA shell (not the API), so the status indicator reads "offline" on
-> preview URLs. A service binding from the preview web Worker to the API Worker,
-> or an isolated preview D1, is the follow-up when previews need live data.
+> **Resolved (KAN-14):** the web Worker now has an entry (`apps/web/src/worker.ts`)
+> that proxies `/api/*` to the API Worker via a **service binding**. In the
+> `preview` env the binding points at `numbat-api-preview`, so PR previews run the
+> SPA against the isolated preview API/DB end-to-end. In production the zone route
+> handles `/api/*` directly, so the proxy is only used on `*.workers.dev`.
 
 **Deferred options:** (2) a named `env.preview` environment, and (3) Cloudflare
 Workers **Previews** (the branch/PR product distinct from Version URLs, linked

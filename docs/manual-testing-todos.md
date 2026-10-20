@@ -18,7 +18,7 @@ feature across every environment, from local dev to production.
 | Env | SPA | API | Database |
 |-----|-----|-----|----------|
 | **Local** | `http://localhost:5173` | `http://localhost:8787` | local Miniflare D1 (`.wrangler/state`) |
-| **Preview (PR)** | `https://pr-<n>-numbat-web…` ⚠️ see KAN-14 | `https://pr-<n>-numbat-api-preview…` | `numbat-db-preview` |
+| **Preview (PR)** | `https://pr-<n>-numbat-web-preview…` | `https://pr-<n>-numbat-api-preview…` | `numbat-db-preview` |
 | **Staging** | *(API only)* | `https://numbat-api-staging…` | `numbat-db-staging` |
 | **Production** | `https://foonix.net/todos` | `https://foonix.net/api` | `numbat-db` |
 
@@ -30,10 +30,9 @@ Database IDs:
 | `numbat-db-staging` | staging | `e3f36ab5-1ea6-4ea0-89f1-de52d3897323` |
 | `numbat-db-preview` | preview | `ccbb09e4-ea7c-47c7-aaa3-b068215afe69` |
 
-⚠️ **Web preview limitation (KAN-14):** the web preview Worker serves static
-assets only, so the SPA's `/api/*` calls hit the SPA shell — the `/todos` page is
-**not** usable on a web preview URL yet. Test the todo flow on **local**,
-**staging API**, or **production**; use the **API preview** for the API itself.
+The web preview Worker proxies `/api/*` to the API preview via a service binding
+(KAN-14), so the **full SPA works on preview URLs** — `/todos` reads/writes the
+isolated `numbat-db-preview`.
 
 ---
 
@@ -109,7 +108,7 @@ npx wrangler d1 migrations apply DB --remote --env staging
 
 Open a PR; the `preview` CI job comments URLs on the PR, e.g.:
 
-- Web (SPA): `https://pr-<n>-numbat-web.<account-subdomain>.workers.dev` (⚠️ KAN-14)
+- Web (SPA): `https://pr-<n>-numbat-web-preview.<account-subdomain>.workers.dev`
 - **API:** `https://pr-<n>-numbat-api-preview.<account-subdomain>.workers.dev`
 
 The API preview runs the `preview` environment → `numbat-db-preview` (isolated;
@@ -196,5 +195,5 @@ npx wrangler d1 migrations apply numbat-db --remote
 | `/api/todos` returns 500 | `todos` table missing → apply the migration for that environment. |
 | `Couldn't find a D1 DB with the name or binding …` | You're on the default env; use `--env staging`/`--env preview` (or the DB name). |
 | `… run in the root of a workspace …` | Run wrangler from `apps/worker` (or pass `-c apps/worker/wrangler.jsonc`). |
-| Web preview `/todos` empty / errors | Expected — see KAN-14 (web preview has no API). |
+| Web preview `/todos` empty / errors | The preview web Worker proxies `/api/*` to `numbat-api-preview`; check that worker exists and the `API` service binding is set (`wrangler deploy --env preview`). |
 | Error response body | All failures use the envelope: `{ "error": { code, message, requestId, details? } }`; quote the `requestId` when debugging (`wrangler tail numbat-api`). |
