@@ -38,6 +38,8 @@ backend, deployed to Cloudflare Workers.
   for exercising the DB + todo feature across local/staging/preview/prod.
 - **Todo UI plan:** see [`docs/todo-ui-plan.md`](docs/todo-ui-plan.md)
   (single-user full CRUD, tracking ticket **KAN-15**).
+- **OpenAPI plan:** see [`docs/openapi-plan.md`](docs/openapi-plan.md)
+  (spec-first `openapi.yaml` + codegen + Swagger UI, tracking ticket **KAN-16**).
 
 ## Verified CLI Access
 
