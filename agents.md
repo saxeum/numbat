@@ -36,6 +36,8 @@ backend, deployed to Cloudflare Workers.
   (D1 + Drizzle, tracking ticket **KAN-10**).
 - **Manual testing:** see [`docs/manual-testing-todos.md`](docs/manual-testing-todos.md)
   for exercising the DB + todo feature across local/staging/preview/prod.
+- **Todo UI plan:** see [`docs/todo-ui-plan.md`](docs/todo-ui-plan.md)
+  (single-user full CRUD, tracking ticket **KAN-15**).
 
 ## Verified CLI Access
 
