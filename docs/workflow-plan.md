@@ -98,27 +98,35 @@ auto-delete head branches.
 
 **Approver:** none — agent-implementable, normal PR review.
 
-### W3 — Preview deployments (G3, un-defers D11)
+### W3 — Preview deployments (G3, un-defers D11) — **implemented (option 1)**
 
 Goal: every PR gets a live URL for the web Worker (and, later, an isolated API +
 preview D1).
 
-Options (to be decided when implementing):
+**Implemented:** per-version **Version URLs** (formerly "preview URLs") via the
+`preview` CI job:
 
-1. **Per-version Preview URLs** — enable `preview_urls`, and on PR run
-   `wrangler versions upload` (via `cloudflare/wrangler-action`), then comment the
-   generated preview URL on the PR. Least infrastructure.
-2. **Named `preview` environment** in `wrangler.jsonc` (`env.preview`) with its
-   own Worker name + route (e.g. `pr-<n>.preview.foonix.net`); requires dynamic
-   route management.
-3. **Cloudflare Workers Builds** — Git-integrated preview builds; adopt only if it
-   covers the test gates (it would partly duplicate our workflow).
+- `workers_dev: true` and `preview_urls: true` in both `wrangler.jsonc` files.
+- On PR, after `verify`, CI runs `wrangler versions upload --preview-alias
+  pr-<number>` for both Workers and posts/updates a single comment with the alias
+  URLs (`https://pr-<n>-numbat-web.<account-subdomain>.workers.dev`, `...-numbat-api...`).
+- Fork PRs are skipped (no secrets). PR previews are isolated per version; no new
+  DNS.
 
-Recommendation: start with **option 1** (cheapest, no new DNS), and add an
-isolated preview D1 when persistence lands.
+> **Gotcha:** the `previews_enabled` / Version URL setting is only (re)applied by
+> a **deploy** with `preview_urls: true`, not by `wrangler versions upload` or the
+> API. Both Workers have now been deployed with it, so `versions upload` prints
+> the URLs and they resolve. Re-deploy if the setting ever flips back.
 
-**Approver:** Cloudflare dashboard/API (enable previews; possibly widen token).
-Implementation is agent-doable once approved.
+> **Known limitation:** the web preview calls `/api/*` on its own origin, which
+> serves the SPA shell (not the API), so the status indicator reads "offline" on
+> preview URLs. A service binding from the preview web Worker to the API Worker,
+> or an isolated preview D1, is the follow-up when previews need live data.
+
+**Deferred options:** (2) a named `env.preview` environment, and (3) Cloudflare
+Workers **Previews** (the branch/PR product distinct from Version URLs, linked
+from the docs as the recommended isolated-PR workflow). Revisit if per-version
+URLs prove limiting or previews need isolated storage.
 
 ### W4 — Deploy safety & staging (G4)
 

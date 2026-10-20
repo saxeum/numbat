@@ -4,9 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-19",
   "workers_dev": true,
-  "preview_urls": false,
+  "preview_urls": true,
   "observability": { "enabled": true },
-  "routes": [
-    { "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }
-  ]
+  "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
 }

@@ -13,6 +13,8 @@
     "build": "npm run build -w apps/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "npm test --workspaces --if-present",
     "test:e2e": "playwright test",
     "deploy:api": "npm run deploy -w apps/worker",
@@ -20,7 +22,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
-    "concurrently": "^9"
+    "concurrently": "^9",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1"
   },
   "allowScripts": {
     "esbuild": true,

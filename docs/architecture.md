@@ -25,7 +25,7 @@ requested (see `agents.md`).
 | D8 | Auth | **Deferred to a later stage** (see §10) | Cloudflare Access; Better Auth; managed IdP |
 | D9 | Repo structure | **Monorepo (workspaces)** — API and web apps plus a shared contracts package | Single package |
 | D10 | Custom domain | **`foonix.net`** (apex; Cloudflare zone already in-account). Web + API share the origin via path routes | Subdomain split; `*.workers.dev` |
-| D11 | Preview deployments | **Deferred to a later stage** (see §12, §16) | Per-PR Workers env; Workers Builds previews |
+| D11 | Preview deployments | **Per-PR Version URLs** (see `workflow-plan.md` W3) | Named preview env; Workers Builds/Previews |
 
 ---
 
@@ -278,8 +278,10 @@ bindings rather than mocks.
 
 - **On pull request:** install → typecheck → lint → unit/integration tests →
   build (no deploy).
-- **Preview deployments: deferred to a later stage.** When added, choose per-PR
-  Workers environments or Workers Builds previews (see §16).
+- **Preview deployments: per-PR Version URLs.** CI uploads a version per PR
+  (`wrangler versions upload --preview-alias pr-<n>`) and comments the URL
+  (`workflow-plan.md` W3). Named preview environments or Workers Builds/Previews
+  remain alternatives if previews need isolated storage — see §16.
 - **On merge to `main`:** build → deploy **both Workers** (web and API) to
   production via `cloudflare/wrangler-action` (e.g. a matrix over the two apps),
   authenticated with a Cloudflare API token stored as a GitHub Actions secret.
@@ -349,8 +351,8 @@ becomes a blocker.
    user-specific data model is finalized.
 2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
    D1 + Drizzle is the intended choice when persistence is introduced.
-3. **Preview deployments** — CI runs tests and builds but does not deploy
-   previews yet (see §12).
+3. **Preview deployments** — per-PR Version URLs are wired up (see §12 and
+   `workflow-plan.md` W3).
 
 ### Open
 None at present. The frontend stack — the last open item — is now decided; see

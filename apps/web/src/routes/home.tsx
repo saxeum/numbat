@@ -12,7 +12,11 @@ const statusDot = {
 export function HomePage() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
 
-  const status = health.isPending ? "checking" : health.isError ? "offline" : "online";
+  const status = health.isPending
+    ? "checking"
+    : health.isError
+      ? "offline"
+      : "online";
   const label =
     status === "checking"
       ? "Checking API…"
@@ -38,7 +42,11 @@ export function HomePage() {
             </a>
           </Button>
           <Button variant="outline" asChild>
-            <a href="https://github.com/saxeum/numbat" target="_blank" rel="noreferrer">
+            <a
+              href="https://github.com/saxeum/numbat"
+              target="_blank"
+              rel="noreferrer"
+            >
               GitHub
             </a>
           </Button>

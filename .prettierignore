@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output / generated
+dist/
+.wrangler/
+worker-configuration.d.ts
+package-lock.json
+
+# Test / coverage artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Hand-wrapped prose — keep author-controlled
+docs/
+*.md

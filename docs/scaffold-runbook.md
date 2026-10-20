@@ -352,9 +352,10 @@ npm run deploy:web     # builds SPA, registers foonix.net (custom domain)
 > route (untestable until the web Worker creates apex DNS). Set
 > `"workers_dev": true` to keep a testable hostname; for this account the test
 > URL is `https://numbat-api.<account-subdomain>.workers.dev` (account subdomain
-> `<account-subdomain>`). Enabling `workers_dev` also enables per-version **Preview URLs**
-> by default (Wrangler warns); preview deployments are deferred (architecture
-> D11), so set `"preview_urls": false` explicitly.
+> `<account-subdomain>`). Per-version **Version URLs** (formerly "preview URLs") are now
+> enabled (`"preview_urls": true`) and wired into PR CI — see
+> [`workflow-plan.md`](workflow-plan.md) W3. Note the setting is only applied by a
+> **deploy**, not by `versions upload`.
 
 Verify:
 
@@ -573,8 +574,8 @@ Status as of the 2026-10-20 scaffold:
 - **Stack at scaffold time (2026-10):** Vite 9, React 19, TypeScript 7,
   `react-router` 8, shadcn v4 (Nova preset, unified `radix-ui`), Tailwind v4.
 - **`routes` disables `workers.dev`** — add `"workers_dev": true` for a
-  testable hostname and `"preview_urls": false` (preview deployments are
-  deferred; §6).
+  testable hostname; `"preview_urls": true` enables per-version Version URLs used
+  for PR previews (§6, `workflow-plan.md` W3).
 - **Invoke Wrangler per app**, never at the workspace root (§6).
 - **Auth stays deferred** (see `architecture.md` §10); `/api/*` is intentionally
   public until then.
