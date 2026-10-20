@@ -43,6 +43,7 @@ export function HomePage() {
             </a>
           </Button>
         </div>
+        <div>Eat more fish!</div>
         <p
           className="inline-flex items-center gap-2 font-mono text-sm text-muted-foreground"
           aria-live="polite"
