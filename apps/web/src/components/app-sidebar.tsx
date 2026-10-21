@@ -198,7 +198,8 @@ export function AppSidebar({
 
   const onChat = pathname.startsWith("/gateway/chat");
   const conversationId = onChat ? pathname.split("/")[3] : undefined;
-  const conversations = useConversations(authed && onChat);
+  // Keep the recent chats visible on every screen once signed in.
+  const conversations = useConversations(authed);
   const renameConversation = useRenameConversation();
   const deleteConversation = useDeleteConversation();
 
@@ -271,7 +272,7 @@ export function AppSidebar({
           {!collapsed ? "New chat" : null}
         </button>
 
-        {!collapsed && authed && onChat ? (
+        {!collapsed && authed ? (
           <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
             <ConversationList
               conversations={conversations.data ?? []}

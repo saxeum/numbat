@@ -340,3 +340,25 @@ test("chat: jump-to-latest appears when scrolled up", async ({ page }) => {
   await jump.click();
   await expect(jump).toBeHidden();
 });
+
+test("chat: recent chats stay in the sidebar on other routes", async ({
+  page,
+}) => {
+  await mockGateway(page);
+  await page.goto("/gateway/chat");
+  await signIn(page);
+
+  const composer = page.getByPlaceholder("Message Foonix…");
+  await expect(composer).toBeVisible({ timeout: 15_000 });
+  await composer.fill("Persistent chat");
+  await composer.press("Enter");
+  await expect(page.getByRole("link", { name: "Persistent chat" })).toBeVisible(
+    { timeout: 15_000 },
+  );
+
+  // Navigate home via the brand — the chat list should remain visible.
+  await page.getByRole("link", { name: "Foonix" }).first().click();
+  await expect(page.getByRole("link", { name: "Persistent chat" })).toBeVisible(
+    { timeout: 15_000 },
+  );
+});
