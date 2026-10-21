@@ -80,19 +80,30 @@ function geminiText(candidate: unknown): string {
   return parts.map((p) => (typeof p.text === "string" ? p.text : "")).join("");
 }
 
+interface UsageWithReasoning extends Usage {
+  completion_tokens_details?: { reasoning_tokens: number };
+}
+
+function geminiUsage(
+  usageMeta: Json | undefined,
+): UsageWithReasoning | undefined {
+  if (!usageMeta) return undefined;
+  const usage: UsageWithReasoning = {
+    prompt_tokens: Number(usageMeta.promptTokenCount ?? 0),
+    completion_tokens: Number(usageMeta.candidatesTokenCount ?? 0),
+    total_tokens: Number(usageMeta.totalTokenCount ?? 0),
+  };
+  const reasoning = Number(usageMeta.thoughtsTokenCount ?? 0);
+  if (Number.isFinite(reasoning) && reasoning > 0) {
+    usage.completion_tokens_details = { reasoning_tokens: reasoning };
+  }
+  return usage;
+}
+
 export function fromGeminiResponse(json: Json, model: string): ChatCompletion {
   const candidates = (json.candidates as Json[] | undefined) ?? [];
   const first = candidates[0];
-  const usageMeta = json.usageMetadata as Json | undefined;
-
-  let usage: Usage | undefined;
-  if (usageMeta) {
-    usage = {
-      prompt_tokens: Number(usageMeta.promptTokenCount ?? 0),
-      completion_tokens: Number(usageMeta.candidatesTokenCount ?? 0),
-      total_tokens: Number(usageMeta.totalTokenCount ?? 0),
-    };
-  }
+  const usage = geminiUsage(json.usageMetadata as Json | undefined);
 
   return {
     id: newCompletionId(),
@@ -132,6 +143,23 @@ function chunk(
   };
 }
 
+/** A trailing chunk that carries only `usage` (empty choices). */
+function usageChunk(
+  id: string,
+  created: number,
+  model: string,
+  usage: UsageWithReasoning,
+): ChatCompletionChunk {
+  return {
+    id,
+    object: "chat.completion.chunk",
+    created,
+    model,
+    choices: [],
+    usage,
+  };
+}
+
 /** Convert Gemini's SSE stream into OpenAI `chat.completion.chunk` frames. */
 export function geminiStreamToOpenAI(
   source: ReadableStream<Uint8Array>,
@@ -144,7 +172,20 @@ export function geminiStreamToOpenAI(
   const reader = source.getReader();
   let buffer = "";
   let finished = false;
+  let usageMeta: Json | undefined;
+  let usageEmitted = false;
   const emit = (payload: string) => encoder.encode("data: " + payload + "\n\n");
+  const emitUsage = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+  ) => {
+    const usage = geminiUsage(usageMeta);
+    if (usage && !usageEmitted) {
+      usageEmitted = true;
+      controller.enqueue(
+        emit(JSON.stringify(usageChunk(id, created, model, usage))),
+      );
+    }
+  };
 
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
@@ -156,6 +197,7 @@ export function geminiStreamToOpenAI(
               emit(JSON.stringify(chunk(id, created, model, "", "stop"))),
             );
           }
+          emitUsage(controller);
           controller.close();
           return;
         }
@@ -174,6 +216,7 @@ export function geminiStreamToOpenAI(
           } catch {
             continue;
           }
+          if (json.usageMetadata) usageMeta = json.usageMetadata as Json;
           const first = ((json.candidates as Json[] | undefined) ?? [])[0];
           const text = geminiText(first);
           if (text) {
@@ -189,6 +232,7 @@ export function geminiStreamToOpenAI(
               emit(JSON.stringify(chunk(id, created, model, "", finish))),
             );
             enqueued = true;
+            emitUsage(controller);
           }
         }
         if (enqueued) return;
