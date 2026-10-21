@@ -35,6 +35,8 @@ export function GatewayChatPage() {
     tokens: number;
   }>({ ttftMs: null, tokens: 0 });
   const startedAt = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const [cancelled, setCancelled] = useState(false);
 
   const loading = credentials.isPending || models.isPending;
 
@@ -74,23 +76,38 @@ export function GatewayChatPage() {
     // Empty prompt sends "hello" (handy for a quick smoke test).
     const text = prompt.trim() || "hello";
     setLive("");
+    setCancelled(false);
     setLiveMetrics({ ttftMs: null, tokens: 0 });
     startedAt.current = performance.now();
-    await chat.mutateAsync({
-      model: effectiveModel,
-      messages: [{ role: "user", content: text }],
-      stream,
-      onToken: stream
-        ? (delta) => {
-            setLive((prev) => prev + delta);
-            setLiveMetrics((m) => ({
-              ttftMs: m.ttftMs ?? performance.now() - startedAt.current,
-              tokens: m.tokens + 1,
-            }));
-          }
-        : undefined,
-    });
-    setPrompt("");
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      await chat.mutateAsync({
+        model: effectiveModel,
+        messages: [{ role: "user", content: text }],
+        stream,
+        signal: controller.signal,
+        onToken: stream
+          ? (delta) => {
+              setLive((prev) => prev + delta);
+              setLiveMetrics((m) => ({
+                ttftMs: m.ttftMs ?? performance.now() - startedAt.current,
+                tokens: m.tokens + 1,
+              }));
+            }
+          : undefined,
+      });
+      setPrompt("");
+    } catch {
+      // Aborted or failed; the UI reflects the state.
+    } finally {
+      abortRef.current = null;
+    }
+  }
+
+  function onCancel() {
+    setCancelled(true);
+    abortRef.current?.abort();
   }
 
   const streaming = chat.isPending && stream && liveMetrics.tokens > 0;
@@ -224,19 +241,33 @@ export function GatewayChatPage() {
             />
           </div>
 
-          <Button
-            type="submit"
-            className="self-start"
-            disabled={chat.isPending || !effectiveModel}
-          >
-            {chat.isPending ? "Thinking…" : "Send"}
-            {chat.isPending ? null : <ArrowRight />}
-          </Button>
+          {chat.isPending ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              className="self-start"
+              disabled={!effectiveModel}
+            >
+              Send
+              <ArrowRight />
+            </Button>
+          )}
         </form>
       )}
 
-      {chat.isError ? (
+      {chat.isError && !cancelled ? (
         <p className="text-sm text-destructive">{chat.error.message}</p>
+      ) : null}
+      {cancelled ? (
+        <p className="text-sm text-muted-foreground">Cancelled.</p>
       ) : null}
 
       {chat.isPending || chat.data ? (

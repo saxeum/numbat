@@ -102,15 +102,18 @@ export interface ChatInput {
   stream?: boolean;
   /** Called with each content delta while streaming. */
   onToken?: (delta: string) => void;
+  /** Abort the in-flight request. */
+  signal?: AbortSignal;
 }
 
 export async function chat(input: ChatInput): Promise<ChatOutcome> {
-  const { onToken, ...body } = input;
+  const { onToken, signal, ...body } = input;
   const started = performance.now();
   const res = await fetch("/api/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) {
     throw new Error(await errorMessage(res, "Chat failed"));
