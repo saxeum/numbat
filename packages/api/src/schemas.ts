@@ -165,3 +165,12 @@ export const CreateMessageRequest = z.object({
   stopped: z.boolean().optional(),
 });
 export type CreateMessageRequest = z.infer<typeof CreateMessageRequest>;
+
+export const CreateCompletionRequest = z.object({
+  model: z.string().max(200),
+  content: z.string().optional(),
+  regenerate: z.boolean().optional(),
+  provider: z.string().max(64).optional(),
+  stream: z.boolean().optional(),
+});
+export type CreateCompletionRequest = z.infer<typeof CreateCompletionRequest>;

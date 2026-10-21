@@ -448,6 +448,48 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Error"
+  /conversations/{id}/completions:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    post:
+      operationId: createConversationCompletion
+      tags: [chat]
+      summary: Run a completion within a conversation (server-orchestrated)
+      description: |
+        Appends the user turn (unless `regenerate`), replays the conversation
+        history (oldest turns trimmed to fit the context window), proxies the
+        provider, and persists the assistant turn with exact usage. Streams SSE
+        by default (`stream: false` for a single JSON completion).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompletionRequest"
+      responses:
+        "200":
+          description: OpenAI-shaped completion (JSON, or SSE when `stream`)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          description: Upstream provider error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     sessionCookie:
@@ -758,6 +800,23 @@ components:
           type: integer
           minimum: 0
         stopped:
+          type: boolean
+    CreateCompletionRequest:
+      type: object
+      required: [model]
+      additionalProperties: false
+      properties:
+        model:
+          type: string
+          maxLength: 200
+        content:
+          type: string
+        regenerate:
+          type: boolean
+        provider:
+          type: string
+          maxLength: 64
+        stream:
           type: boolean
     ErrorResponse:
       type: object

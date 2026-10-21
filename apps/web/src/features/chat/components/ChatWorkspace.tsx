@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "lucide-react";
 
 import type { Message } from "@numbat/api";
@@ -15,29 +15,13 @@ import {
   useConversation,
   useConversations,
   useCreateConversation,
-  useCreateMessage,
   useDeleteConversation,
   useRenameConversation,
   useTruncateFromMessage,
 } from "@/features/chat/hooks";
-import { deriveTitle, type ChatRequestMessage } from "@/features/chat/types";
-import { useChatStream, type SendResult } from "@/features/chat/useChatStream";
+import { deriveTitle } from "@/features/chat/types";
+import { useChatStream } from "@/features/chat/useChatStream";
 import { getHealth } from "@/lib/api";
-
-function assistantInput(result: SendResult) {
-  return {
-    role: "assistant" as const,
-    content: result.content,
-    model: result.model,
-    provider: result.provider ?? undefined,
-    promptTokens: result.usage?.prompt ?? undefined,
-    completionTokens: result.usage?.completion ?? result.tokens ?? undefined,
-    reasoningTokens: result.usage?.reasoning ?? undefined,
-    ttftMs: result.ttftMs != null ? Math.round(result.ttftMs) : undefined,
-    totalMs: Math.round(result.totalMs),
-    stopped: result.stopped,
-  };
-}
 
 function ConversationSkeleton() {
   return (
@@ -55,6 +39,7 @@ function ConversationSkeleton() {
 export function ChatWorkspace() {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
   const authed = Boolean(session);
 
@@ -62,7 +47,6 @@ export function ChatWorkspace() {
   const conversationQuery = useConversation(conversationId, authed);
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
   const createConversation = useCreateConversation();
-  const createMessage = useCreateMessage();
   const deleteConversation = useDeleteConversation();
   const renameConversation = useRenameConversation();
   const truncate = useTruncateFromMessage();
@@ -71,6 +55,7 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [stream, setStream] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [trimmed, setTrimmed] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const conversations = conversationsQuery.data ?? [];
@@ -81,9 +66,15 @@ export function ChatWorkspace() {
     Boolean(conversationId) && conversationQuery.isPending;
   const offline = health.isError;
 
+  async function invalidate(id: string) {
+    await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    await queryClient.invalidateQueries({ queryKey: ["conversations", id] });
+  }
+
   function onNew() {
     setError(null);
     setInput("");
+    setTrimmed(0);
     setSidebarOpen(false);
     navigate("/gateway/chat");
   }
@@ -97,28 +88,11 @@ export function ChatWorkspace() {
     renameConversation.mutate({ id, title });
   }
 
-  function toHistory(list: Message[]): ChatRequestMessage[] {
-    return list
-      .filter((message) => message.role !== "system")
-      .map((message) => ({ role: message.role, content: message.content }));
-  }
-
-  async function runCompletion(
-    id: string,
-    history: ChatRequestMessage[],
-    model: string,
-  ) {
-    const result = await send({ model, messages: history, stream });
-    await createMessage.mutateAsync({
-      conversationId: id,
-      input: assistantInput(result),
-    });
-  }
-
   async function onSend({ model }: { model: string }) {
     const text = input.trim();
     if (!text || streaming) return;
     setError(null);
+    setTrimmed(0);
 
     let id = conversationId;
     if (!id) {
@@ -129,20 +103,17 @@ export function ChatWorkspace() {
       id = created.id;
       navigate(`/gateway/chat/${id}`, { replace: true });
     }
-
-    const history = toHistory(messages);
-    await createMessage.mutateAsync({
-      conversationId: id,
-      input: { role: "user", content: text },
-    });
     setInput("");
 
     try {
-      await runCompletion(
-        id,
-        [...history, { role: "user", content: text }],
+      const result = await send({
+        conversationId: id,
         model,
-      );
+        content: text,
+        stream,
+      });
+      setTrimmed(result.trimmed ?? 0);
+      await invalidate(id);
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Chat failed");
     }
@@ -150,22 +121,20 @@ export function ChatWorkspace() {
 
   async function onRegenerate(message: Message) {
     if (!activeConversation || streaming) return;
-    const index = activeConversation.messages.findIndex(
-      (m) => m.id === message.id,
-    );
-    if (index < 0) return;
     setError(null);
-    const history = toHistory(activeConversation.messages.slice(0, index));
     try {
       await truncate.mutateAsync({
         conversationId: activeConversation.id,
         messageId: message.id,
       });
-      await runCompletion(
-        activeConversation.id,
-        history,
-        message.model ?? activeConversation.model,
-      );
+      const result = await send({
+        conversationId: activeConversation.id,
+        model: message.model ?? activeConversation.model,
+        regenerate: true,
+        stream,
+      });
+      setTrimmed(result.trimmed ?? 0);
+      await invalidate(activeConversation.id);
     } catch (regenerateError) {
       setError(
         regenerateError instanceof Error ? regenerateError.message : "Failed",
@@ -175,26 +144,20 @@ export function ChatWorkspace() {
 
   async function onEdit(message: Message, content: string) {
     if (!activeConversation || streaming || !content.trim()) return;
-    const index = activeConversation.messages.findIndex(
-      (m) => m.id === message.id,
-    );
-    if (index < 0) return;
     setError(null);
-    const history = toHistory(activeConversation.messages.slice(0, index));
     try {
       await truncate.mutateAsync({
         conversationId: activeConversation.id,
         messageId: message.id,
       });
-      await createMessage.mutateAsync({
+      const result = await send({
         conversationId: activeConversation.id,
-        input: { role: "user", content: content.trim() },
+        model: message.model ?? activeConversation.model,
+        content: content.trim(),
+        stream,
       });
-      await runCompletion(
-        activeConversation.id,
-        [...history, { role: "user", content: content.trim() }],
-        message.model ?? activeConversation.model,
-      );
+      setTrimmed(result.trimmed ?? 0);
+      await invalidate(activeConversation.id);
     } catch (editError) {
       setError(editError instanceof Error ? editError.message : "Failed");
     }
@@ -286,6 +249,11 @@ export function ChatWorkspace() {
           </div>
         ) : (
           <>
+            {trimmed > 0 ? (
+              <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+                Earlier messages were omitted to fit the model's context window.
+              </div>
+            ) : null}
             <MessageList
               messages={messages}
               streaming={streaming}

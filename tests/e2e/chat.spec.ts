@@ -24,18 +24,56 @@ const models = {
   ],
 };
 
-const sse = [
-  'data: {"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"content":"Pong"}}]}',
-  'data: {"choices":[{"index":0,"delta":{"content":" — "}}]}',
-  'data: {"choices":[{"index":0,"delta":{"content":"ready when you are."}}]}',
-  'data: {"choices":[{"index":0,"delta":{"content":"\\n\\n```js\\nconst x = 1;\\n```"}}]}',
-  'data: {"choices":[{"index":0,"delta":{}}],"usage":{"prompt_tokens":12,"completion_tokens":7}}',
-  "data: [DONE]",
-  "",
-].join("\n\n");
+const DEFAULT_REPLY = "Pong — ready when you are.\n\n```js\nconst x = 1;\n```";
 
-/** Mock the provider surface so the chat flow needs no real keys. */
-async function mockGateway(page: Page, chatBody: string = sse) {
+interface MockMessage {
+  id: string;
+  conversationId: string;
+  role: string;
+  content: string;
+  model: string | null;
+  provider: string | null;
+  completionTokens: number | null;
+  ttftMs: number | null;
+  totalMs: number | null;
+  stopped: boolean;
+  createdAt: string;
+}
+
+interface MockConversation {
+  id: string;
+  title: string;
+  model: string;
+  provider: string | null;
+  createdAt: string;
+  updatedAt: string;
+  messages: MockMessage[];
+}
+
+/**
+ * Stateful in-memory mock of the conversations API. The KAN-42 client delegates
+ * persistence to the server, so the mock stores turns itself (no double-write).
+ */
+async function mockGateway(page: Page, reply: string = DEFAULT_REPLY) {
+  let seq = 0;
+  const uid = () => `id-${++seq}`;
+  const store = new Map<string, MockConversation>();
+  const sse = [
+    `data: ${JSON.stringify({ model: "openai/gpt-oss-120b", choices: [{ index: 0, delta: { content: reply } }] })}`,
+    `data: ${JSON.stringify({ choices: [{ index: 0, delta: {} }], usage: { prompt_tokens: 12, completion_tokens: 7 } })}`,
+    "data: [DONE]",
+    "",
+  ].join("\n\n");
+
+  const meta = (c: MockConversation) => ({
+    id: c.id,
+    title: c.title,
+    model: c.model,
+    provider: c.provider,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  });
+
   await page.route("**/api/credentials", (route) =>
     route.fulfill({
       status: 200,
@@ -50,16 +88,137 @@ async function mockGateway(page: Page, chatBody: string = sse) {
       body: JSON.stringify(models),
     }),
   );
-  await page.route("**/api/chat/completions", (route) =>
-    route.fulfill({
-      status: 200,
-      headers: {
-        "content-type": "text/event-stream",
-        "x-byokfree-provider": "groq",
-      },
-      body: chatBody,
-    }),
-  );
+
+  await page.route("**/api/conversations**", async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const path = new URL(request.url()).pathname;
+    const parts = path.split("/").filter(Boolean); // api, conversations, id?, ...
+    const id = parts[2];
+    const sub = parts[3];
+    const messageId = parts[4];
+    const now = () => new Date().toISOString();
+
+    if (!id) {
+      if (method === "GET") {
+        const list = [...store.values()]
+          .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+          .map(meta);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(list),
+        });
+      }
+      if (method === "POST") {
+        const body = (request.postDataJSON() ?? {}) as {
+          title?: string;
+          model?: string;
+        };
+        const conversation: MockConversation = {
+          id: uid(),
+          title: body.title ?? "",
+          model: body.model ?? "",
+          provider: "groq",
+          createdAt: now(),
+          updatedAt: now(),
+          messages: [],
+        };
+        store.set(conversation.id, conversation);
+        return route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify(meta(conversation)),
+        });
+      }
+    }
+
+    const conversation = id ? store.get(id) : undefined;
+    if (!conversation) {
+      return route.fulfill({ status: 404, body: "{}" });
+    }
+
+    if (!sub) {
+      if (method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ...meta(conversation),
+            messages: conversation.messages,
+          }),
+        });
+      }
+      if (method === "PATCH") {
+        const body = (request.postDataJSON() ?? {}) as { title?: string };
+        conversation.title = body.title ?? conversation.title;
+        conversation.updatedAt = now();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(meta(conversation)),
+        });
+      }
+      if (method === "DELETE") {
+        store.delete(id!);
+        return route.fulfill({ status: 204, body: "" });
+      }
+    }
+
+    if (sub === "messages" && method === "DELETE") {
+      const index = conversation.messages.findIndex((m) => m.id === messageId);
+      if (index >= 0)
+        conversation.messages = conversation.messages.slice(0, index);
+      return route.fulfill({ status: 204, body: "" });
+    }
+
+    if (sub === "completions" && method === "POST") {
+      const body = (request.postDataJSON() ?? {}) as {
+        content?: string;
+        regenerate?: boolean;
+        model: string;
+      };
+      if (!body.regenerate) {
+        conversation.messages.push({
+          id: uid(),
+          conversationId: conversation.id,
+          role: "user",
+          content: body.content ?? "",
+          model: body.model,
+          provider: "groq",
+          completionTokens: null,
+          ttftMs: null,
+          totalMs: null,
+          stopped: false,
+          createdAt: now(),
+        });
+      }
+      conversation.messages.push({
+        id: uid(),
+        conversationId: conversation.id,
+        role: "assistant",
+        content: reply,
+        model: body.model,
+        provider: "groq",
+        completionTokens: 7,
+        ttftMs: 30,
+        totalMs: 120,
+        stopped: false,
+        createdAt: now(),
+      });
+      conversation.updatedAt = now();
+      return route.fulfill({
+        status: 200,
+        headers: {
+          "content-type": "text/event-stream",
+          "x-byokfree-provider": "groq",
+        },
+        body: sse,
+      });
+    }
+
+    return route.fulfill({ status: 404, body: "{}" });
+  });
 }
 
 async function signIn(page: Page) {
@@ -93,17 +252,13 @@ test("chat: send a message, stream a reply, and persist the conversation", async
   await composer.fill("Say pong");
   await composer.press("Enter");
 
-  // Streamed assistant reply + provider/model metrics.
   await expect(page.getByText("ready when you are.")).toBeVisible({
     timeout: 15_000,
   });
   await expect(page.getByText(/groq · openai\/gpt-oss-120b/)).toBeVisible();
-
-  // Auto-titled conversation appears in the sidebar.
   await expect(page.getByRole("link", { name: "Say pong" })).toBeVisible();
 
-  // Persists across a reload (server-side, D1 — KAN-39).
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(600);
   await page.reload();
   await expect(page.getByText("ready when you are.")).toBeVisible({
     timeout: 15_000,
@@ -120,14 +275,11 @@ test("chat: renders markdown, regenerates, and renames", async ({ page }) => {
   await composer.fill("Show me code");
   await composer.press("Enter");
 
-  // Markdown code block renders (lazy-loaded renderer).
   await expect(page.locator(".markdown pre")).toBeVisible({ timeout: 15_000 });
 
-  // Regenerate re-runs the completion.
   await page.getByRole("button", { name: "Regenerate" }).click();
   await expect(page.locator(".markdown pre")).toBeVisible({ timeout: 15_000 });
 
-  // Rename via the sidebar (double-click the title).
   await page.getByRole("link", { name: "Show me code" }).dblclick();
   const titleInput = page.locator("aside input");
   await titleInput.fill("Renamed chat");
@@ -149,7 +301,6 @@ test("chat: mobile drawer opens the conversation list", async ({ page }) => {
     timeout: 15_000,
   });
 
-  // Rail is hidden on mobile; the drawer holds it.
   await expect(page.getByRole("link", { name: "Mobile hello" })).toBeHidden();
   await page.getByRole("button", { name: "Open conversations" }).click();
   const drawer = page.getByRole("dialog");
@@ -158,7 +309,6 @@ test("chat: mobile drawer opens the conversation list", async ({ page }) => {
     drawer.getByRole("link", { name: "Mobile hello" }),
   ).toBeVisible();
 
-  // Selecting a conversation closes the drawer.
   await drawer.getByRole("link", { name: "Mobile hello" }).click();
   await expect(drawer).toBeHidden();
 });
@@ -168,13 +318,8 @@ test("chat: jump-to-latest appears when scrolled up", async ({ page }) => {
     { length: 120 },
     (_, index) => `Line ${index + 1} of a deliberately long reply.`,
   ).join("\n\n");
-  const longSse = [
-    `data: ${JSON.stringify({ model: "openai/gpt-oss-120b", choices: [{ index: 0, delta: { content: longReply } }] })}`,
-    "data: [DONE]",
-    "",
-  ].join("\n\n");
 
-  await mockGateway(page, longSse);
+  await mockGateway(page, longReply);
   await page.goto("/gateway/chat");
   await signIn(page);
 

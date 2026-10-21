@@ -1,4 +1,5 @@
 import {
+  CreateCompletionRequest,
   CreateConversationRequest,
   CreateMessageRequest,
   UpdateConversationRequest,
@@ -6,6 +7,15 @@ import {
 import { Hono } from "hono";
 
 import { createDb } from "../../db/client";
+import {
+  clientCompletionResponse,
+  createSseAccumulator,
+  extractCompletion,
+  prepareCompletion,
+  trimHistory,
+  type CompletionMessage,
+  type TokenUsage,
+} from "../../gateway/completions";
 import {
   createConversation,
   createMessage,
@@ -127,6 +137,125 @@ conversations.post(
     });
     await touchConversation(db, ownerId, id, now);
     return c.json(row, 201);
+  },
+);
+
+/**
+ * Server-orchestrated completion: appends the user turn, replays (trimmed)
+ * history, streams the reply, and persists the assistant turn + usage.
+ */
+conversations.post(
+  "/:id/completions",
+  validate("json", CreateCompletionRequest),
+  async (c) => {
+    const id = c.req.param("id");
+    const ownerId = c.get("userId");
+    const db = createDb(c.env.DB);
+    const conversation = await getConversation(db, ownerId, id);
+    if (!conversation) throw notFound(id);
+
+    const body = c.req.valid("json");
+    const model = body.model;
+    const stream = body.stream !== false;
+
+    // Regenerate reuses the existing history; otherwise append the new turn.
+    if (!body.regenerate) {
+      if (!body.content || !body.content.trim()) {
+        throw new AppError(400, "VALIDATION_ERROR", "`content` is required");
+      }
+      const now = new Date().toISOString();
+      await createMessage(db, {
+        id: crypto.randomUUID(),
+        conversationId: id,
+        ownerId,
+        role: "user",
+        content: body.content,
+        model,
+        provider: body.provider ?? null,
+        promptTokens: null,
+        completionTokens: null,
+        reasoningTokens: null,
+        ttftMs: null,
+        totalMs: null,
+        stopped: false,
+        createdAt: now,
+      });
+      await touchConversation(db, ownerId, id, now);
+    }
+
+    const history = await listMessages(db, id);
+    const trimmed = trimHistory(
+      history.map((message) => ({
+        role: message.role as CompletionMessage["role"],
+        content: message.content,
+      })),
+    );
+
+    const prepared = await prepareCompletion(c.env, db, ownerId, {
+      model,
+      messages: trimmed.messages,
+      stream,
+      providerHint: body.provider,
+    });
+
+    const response = await clientCompletionResponse(prepared);
+    const headers = new Headers(response.headers);
+    if (trimmed.omitted > 0) {
+      headers.set("x-byokfree-trimmed", String(trimmed.omitted));
+    }
+
+    const persistAssistant = async (result: {
+      content: string;
+      model: string;
+      usage: TokenUsage | null;
+    }) => {
+      const now = new Date().toISOString();
+      await createMessage(db, {
+        id: crypto.randomUUID(),
+        conversationId: id,
+        ownerId,
+        role: "assistant",
+        content: result.content,
+        model: result.model || model,
+        provider: prepared.provider,
+        promptTokens: result.usage?.prompt ?? null,
+        completionTokens: result.usage?.completion ?? null,
+        reasoningTokens: result.usage?.reasoning ?? null,
+        ttftMs: null,
+        totalMs: null,
+        stopped: false,
+        createdAt: now,
+      });
+      await touchConversation(db, ownerId, id, now);
+    };
+
+    if (stream) {
+      if (!response.body) {
+        throw new AppError(502, "UPSTREAM_ERROR", "Empty upstream stream");
+      }
+      const accumulator = createSseAccumulator();
+      // Persist on flush: the stream only closes after the turn is stored.
+      const tapped = new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          accumulator.push(chunk);
+          controller.enqueue(chunk);
+        },
+        async flush() {
+          await persistAssistant(accumulator.result());
+        },
+      });
+      return new Response(response.body.pipeThrough(tapped), {
+        status: response.status,
+        headers,
+      });
+    }
+
+    const json = await response.json();
+    await persistAssistant(extractCompletion(json));
+    return new Response(JSON.stringify(json), {
+      status: response.status,
+      headers,
+    });
   },
 );
 

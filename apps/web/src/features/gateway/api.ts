@@ -97,6 +97,8 @@ export interface ChatOutcome {
   tps: number | null;
   /** Exact provider token usage, when reported. */
   usage: TokenUsage | null;
+  /** Older messages omitted to fit the context window (server-orchestrated). */
+  trimmed?: number;
 }
 
 function rate(tokens: number | null, ms: number): number | null {
@@ -135,25 +137,62 @@ export interface ChatInput {
   signal?: AbortSignal;
 }
 
-export async function chat(input: ChatInput): Promise<ChatOutcome> {
-  const { onToken, signal, ...body } = input;
+export interface ChatRequest {
+  /** Defaults to the stateless gateway proxy. */
+  url?: string;
+  body: unknown;
+  /** Used as the model fallback when the response omits one. */
+  model: string;
+  stream?: boolean;
+  onToken?: (delta: string) => void;
+  signal?: AbortSignal;
+}
+
+/**
+ * Posts an OpenAI-shaped chat request and normalises the outcome. Shared by the
+ * stateless proxy (`/api/chat/completions`) and the conversation-scoped
+ * endpoint (`/api/conversations/{id}/completions`).
+ */
+export async function postChat(input: ChatRequest): Promise<ChatOutcome> {
   const started = performance.now();
-  const res = await fetch("/api/chat/completions", {
+  const res = await fetch(input.url ?? "/api/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-    signal,
+    body: JSON.stringify(input.body),
+    signal: input.signal,
   });
   if (!res.ok) {
     throw new Error(await errorMessage(res, "Chat failed"));
   }
 
   const provider = res.headers.get("x-byokfree-provider");
+  const trimmedHeader = res.headers.get("x-byokfree-trimmed");
+  const trimmed = trimmedHeader ? Number(trimmedHeader) : undefined;
 
-  if (input.stream) {
-    return readStream(res, input.model, provider, onToken, started);
-  }
+  const outcome = input.stream
+    ? await readStream(res, input.model, provider, input.onToken, started)
+    : await readJson(res, input.model, provider, started);
 
+  return trimmed !== undefined ? { ...outcome, trimmed } : outcome;
+}
+
+export async function chat(input: ChatInput): Promise<ChatOutcome> {
+  const { onToken, signal, ...body } = input;
+  return postChat({
+    body,
+    model: input.model,
+    stream: input.stream,
+    onToken,
+    signal,
+  });
+}
+
+async function readJson(
+  res: Response,
+  fallbackModel: string,
+  provider: string | null,
+  started: number,
+): Promise<ChatOutcome> {
   const json = (await res.json()) as {
     model?: string;
     usage?: unknown;
@@ -165,7 +204,7 @@ export async function chat(input: ChatInput): Promise<ChatOutcome> {
   return {
     content: json.choices?.[0]?.message?.content ?? "",
     provider,
-    model: json.model ?? input.model,
+    model: json.model ?? fallbackModel,
     ttftMs: null,
     totalMs,
     tokens,

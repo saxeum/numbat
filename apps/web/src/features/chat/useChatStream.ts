@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
-import { chat, type ChatOutcome } from "@/features/gateway/api";
-import type { ChatRequestMessage } from "@/features/chat/types";
+import { completeConversation } from "@/features/chat/api";
+import type { ChatOutcome } from "@/features/gateway/api";
 
 export interface SendResult extends ChatOutcome {
   content: string;
@@ -9,15 +9,17 @@ export interface SendResult extends ChatOutcome {
 }
 
 interface SendInput {
+  conversationId: string;
   model: string;
-  messages: ChatRequestMessage[];
+  /** The new user turn. Omit when regenerating. */
+  content?: string;
+  regenerate?: boolean;
   stream: boolean;
 }
 
 /**
  * Owns the in-flight completion: live streamed text + metrics, plus cancel.
- * Reuses the gateway SSE parser (`features/gateway/api.ts::chat`). Persisting the
- * finished turn is the caller's job (see `ChatWorkspace`).
+ * The turn is persisted server-side (KAN-42); this hook only renders the stream.
  */
 export function useChatStream() {
   const [streaming, setStreaming] = useState(false);
@@ -50,9 +52,10 @@ export function useChatStream() {
       const started = performance.now();
 
       try {
-        const outcome = await chat({
+        const outcome = await completeConversation(input.conversationId, {
           model: input.model,
-          messages: input.messages,
+          content: input.content,
+          regenerate: input.regenerate,
           stream: input.stream,
           signal: controller.signal,
           onToken: input.stream

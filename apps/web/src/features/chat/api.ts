@@ -8,6 +8,8 @@ import {
 } from "@numbat/api";
 import { z } from "zod";
 
+import { postChat, type ChatOutcome } from "@/features/gateway/api";
+
 async function errorMessage(res: Response, fallback: string): Promise<string> {
   const body = (await res.json().catch(() => null)) as {
     error?: { message?: string };
@@ -76,6 +78,37 @@ export async function createMessage(
     throw new Error(await errorMessage(res, "Failed to save message"));
   }
   return Message.parse(await res.json());
+}
+
+export interface CompleteConversationInput {
+  model: string;
+  /** The new user turn. Omit when `regenerate`. */
+  content?: string;
+  /** Re-run the last turn against the existing history. */
+  regenerate?: boolean;
+  provider?: string;
+  stream?: boolean;
+  onToken?: (delta: string) => void;
+  signal?: AbortSignal;
+}
+
+/**
+ * Server-orchestrated completion: the worker appends the turn, replays trimmed
+ * history, and persists the assistant reply. The client only renders the stream.
+ */
+export async function completeConversation(
+  conversationId: string,
+  input: CompleteConversationInput,
+): Promise<ChatOutcome> {
+  const { onToken, signal, ...body } = input;
+  return postChat({
+    url: `/api/conversations/${conversationId}/completions`,
+    body,
+    model: input.model,
+    stream: input.stream,
+    onToken,
+    signal,
+  });
 }
 
 /** Delete a message and everything after it (edit / regenerate). */
