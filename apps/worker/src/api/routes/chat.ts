@@ -15,14 +15,14 @@ import {
   isProviderId,
   type ProviderId,
 } from "../../gateway/providers";
-import { requireSession } from "../middleware/auth";
+import { requireUser } from "../middleware/auth";
 import { AppError } from "../middleware/error";
 import type { AppEnv } from "../types";
 
 export const chat = new Hono<AppEnv>();
 
 // Authenticated + owner-scoped. Uses the caller's stored, encrypted credential.
-chat.use("*", requireSession);
+chat.use("*", requireUser);
 
 const TIMEOUT_MS = 60_000;
 
@@ -57,7 +57,7 @@ chat.post("/completions", async (c) => {
     );
   }
 
-  const ownerId = c.get("user").id;
+  const ownerId = c.get("userId");
   const db = createDb(c.env.DB);
 
   // Resolve the provider: explicit hint, else the model's catalog entry.

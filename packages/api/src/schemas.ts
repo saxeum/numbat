@@ -59,3 +59,33 @@ export const ModelList = z
   .object({ object: z.literal("list"), data: z.array(Model) })
   .passthrough();
 export type ModelList = z.infer<typeof ModelList>;
+
+export const ApiKey = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    prefix: z.string(),
+    createdAt: z.string(),
+    lastUsedAt: z.union([z.string(), z.null()]).optional(),
+    revokedAt: z.union([z.string(), z.null()]).optional(),
+  })
+  .passthrough();
+export type ApiKey = z.infer<typeof ApiKey>;
+
+export const CreateApiKeyRequest = z.object({
+  name: z.string().min(1).max(100),
+});
+export type CreateApiKeyRequest = z.infer<typeof CreateApiKeyRequest>;
+
+export const ApiKeyCreated = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    prefix: z.string(),
+    createdAt: z.string(),
+    lastUsedAt: z.union([z.string(), z.null()]).optional(),
+    revokedAt: z.union([z.string(), z.null()]).optional(),
+    token: z.string(),
+  })
+  .passthrough();
+export type ApiKeyCreated = z.infer<typeof ApiKeyCreated>;

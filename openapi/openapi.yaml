@@ -120,6 +120,9 @@ paths:
       tags: [gateway]
       summary: List the free-tier model catalog
       description: Static POC catalog seeded in D1 (Gemini + Groq).
+      security:
+        - sessionCookie: []
+        - bearerApiKey: []
       responses:
         "200":
           description: The catalog
@@ -143,6 +146,9 @@ paths:
         credential. POC supports `gemini` and `groq`. Pass `stream: true` for
         Server-Sent Events. The response carries `x-byokfree-provider` and
         `x-byokfree-model` headers.
+      security:
+        - sessionCookie: []
+        - bearerApiKey: []
       requestBody:
         required: true
         content:
@@ -188,6 +194,69 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Error"
+  /keys:
+    get:
+      operationId: listApiKeys
+      tags: [gateway]
+      summary: List the caller's API keys (masked)
+      responses:
+        "200":
+          description: The caller's API keys (no secret material)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKey"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createApiKey
+      tags: [gateway]
+      summary: Create an API key (token returned once)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+      responses:
+        "201":
+          description: Created; the plaintext token is only returned here
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /keys/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ApiKeyId"
+    delete:
+      operationId: revokeApiKey
+      tags: [gateway]
+      summary: Revoke an API key
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     sessionCookie:
@@ -195,7 +264,18 @@ components:
       in: cookie
       name: better-auth.session_token
       description: Better Auth session cookie (first-party, same-origin).
+    bearerApiKey:
+      type: http
+      scheme: bearer
+      description: "Gateway API key (`nbk_…`) sent as `Authorization: Bearer`."
   parameters:
+    ApiKeyId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
     CredentialId:
       name: id
       in: path
@@ -298,6 +378,49 @@ components:
           type: integer
         x-free:
           type: boolean
+    ApiKey:
+      type: object
+      required: [id, name, prefix, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+        lastUsedAt:
+          type: [string, "null"]
+        revokedAt:
+          type: [string, "null"]
+    CreateApiKeyRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+    ApiKeyCreated:
+      type: object
+      required: [id, name, prefix, createdAt, token]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+        lastUsedAt:
+          type: [string, "null"]
+        revokedAt:
+          type: [string, "null"]
+        token:
+          type: string
     ModelList:
       type: object
       required: [object, data]

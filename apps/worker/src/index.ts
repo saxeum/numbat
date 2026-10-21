@@ -10,6 +10,7 @@ import { securityHeaders } from "./api/middleware/security";
 import { chat } from "./api/routes/chat";
 import { credentials } from "./api/routes/credentials";
 import { health } from "./api/routes/health";
+import { keys } from "./api/routes/keys";
 import { models } from "./api/routes/models";
 import type { AppEnv } from "./api/types";
 import { createAuth } from "./auth";
@@ -38,6 +39,7 @@ export function createApp() {
   api.route("/credentials", credentials);
   api.route("/models", models);
   api.route("/chat", chat);
+  api.route("/keys", keys);
   // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.
   api.get("/openapi.json", (c) => c.json(openapi));
   api.get("/docs", swaggerUI({ url: "/api/openapi.json" }));

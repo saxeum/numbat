@@ -30,14 +30,14 @@ export const credentials = new Hono<AppEnv>();
 credentials.use("*", requireSession);
 
 credentials.get("/", async (c) => {
-  const rows = await listCredentials(createDb(c.env.DB), c.get("user").id);
+  const rows = await listCredentials(createDb(c.env.DB), c.get("userId"));
   return c.json(rows, 200);
 });
 
 credentials.post("/", validate("json", CreateCredentialRequest), async (c) => {
   const { provider, label, apiKey: rawApiKey } = c.req.valid("json");
   const apiKey = normalizeApiKey(rawApiKey);
-  const ownerId = c.get("user").id;
+  const ownerId = c.get("userId");
 
   // Verify against the provider before we persist anything.
   const verified = await verifyProviderKey(provider, apiKey);
@@ -105,7 +105,7 @@ credentials.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const deleted = await deleteCredential(
     createDb(c.env.DB),
-    c.get("user").id,
+    c.get("userId"),
     id,
   );
   if (!deleted) {

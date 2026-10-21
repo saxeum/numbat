@@ -1,12 +1,15 @@
-import type { CreateCredentialRequest } from "@numbat/api";
+import type { CreateApiKeyRequest, CreateCredentialRequest } from "@numbat/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   chat,
+  createApiKey,
   createCredential,
   deleteCredential,
+  listApiKeys,
   listCredentials,
   listModels,
+  revokeApiKey,
 } from "./api";
 
 export function useCredentials(enabled: boolean) {
@@ -36,6 +39,26 @@ export function useDeleteCredential() {
     mutationFn: (id: string) => deleteCredential(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["credentials"] }),
+  });
+}
+
+export function useApiKeys(enabled: boolean) {
+  return useQuery({ queryKey: ["api-keys"], queryFn: listApiKeys, enabled });
+}
+
+export function useCreateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateApiKeyRequest) => createApiKey(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["api-keys"] }),
+  });
+}
+
+export function useRevokeApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => revokeApiKey(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["api-keys"] }),
   });
 }
 

@@ -3,12 +3,12 @@ import { Hono } from "hono";
 
 import { createDb } from "../../db/client";
 import { listFreeModels } from "../../db/queries/models";
-import { requireSession } from "../middleware/auth";
+import { requireUser } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 export const models = new Hono<AppEnv>();
 
-models.use("*", requireSession);
+models.use("*", requireUser);
 
 models.get("/", async (c) => {
   const rows = await listFreeModels(createDb(c.env.DB));

@@ -26,7 +26,7 @@ will need.
 | P0.3 Security headers | ✅ done (API middleware; web `_headers`, CSP **Report-Only**) |
 | P0.4 Environment / config validation | ✅ done (`ENVIRONMENT` var + Zod, `.dev.vars.example`) |
 | P1.1 Input validation + OpenAPI | ✅ done (`OpenAPIHono`, `GET /api/openapi.json`, health documented) |
-| P1.2 Rate limiting | ↩ **backlog** (skipped 2026-10-20) |
+| P1.2 Rate limiting | ✅ done (KAN-4) |
 | P1.3 Health enhancement | ✅ done (`timestamp`, `version`, DB-check placeholder) |
 | P1.4 Observability | ✅ decision: Workers Logs only; Sentry deferred |
 | P1.5 CI hardening | ✅ done (node24 action bumps, audit step, post-deploy smoke, `main guard`, oxlint override) |
@@ -120,12 +120,14 @@ Implements `architecture.md` §7.3/§7.4.
 - Serve `GET /api/openapi.json`; keep schemas as the single contract.
 - **Test:** invalid body → `400` with the error envelope; valid → success schema.
 
-#### P1.2 Rate limiting — **BACKLOG (skipped 2026-10-20)**
+#### P1.2 Rate limiting — ✅ done (KAN-4)
 
-Deferred. When revisited, do **not** use an in-memory `Map` (per-isolate,
-unbounded, lost on eviction). Options: Cloudflare edge **Rate Limiting rules**
-(zone) for coarse protection, or a **Durable Object / KV-backed** limiter for
-per-key logic. Likely plan-gated on the free tier — verify availability first.
+Implemented with Cloudflare's **Workers Rate Limiting API** binding
+(`ratelimits` in `wrangler.jsonc`; `env.API_RATE_LIMITER.limit({ key })`), keyed
+by client IP, **120 requests / 60s** per location, applied to the whole `/api`
+surface. Returns the standard **429** envelope; the middleware skips when the
+binding is absent (local/tests). Available on our plan (verified: preview
+enforced 120×200 then 429).
 
 #### P1.3 Health check enhancement
 - Extend `HealthResponse` in `packages/shared` (`timestamp`, `version`, optional

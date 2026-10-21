@@ -140,6 +140,39 @@ curl -sN -b /tmp/cookies.txt -X POST $BASE/api/chat/completions \
 Error cases worth confirming: unknown model → `404 MODEL_NOT_FOUND`; a model
 whose provider has no key → `400 NO_CREDENTIAL`; malformed JSON → `400`.
 
+### Programmatic access — API tokens
+
+The session cookie is browser-only. For scripts/SDKs, create an **API token** in
+the GUI: **API tokens** → name it → **Create token**. The token (`nbk_…`) is shown
+**once**; copy it (the copy button, and a ready-made curl snippet using the model
+you selected below it).
+
+```bash
+curl https://<your-origin>/api/chat/completions \
+  -H "authorization: Bearer nbk_…" \
+  -H 'content-type: application/json' \
+  -d '{"model":"openai/gpt-oss-20b","messages":[{"role":"user","content":"pong"}]}'
+```
+
+OpenAI SDK compatible:
+
+```python
+from openai import OpenAI
+client = OpenAI(base_url="https://<your-origin>/api", api_key="nbk_…")
+print(
+    client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=[{"role": "user", "content": "pong"}],
+    ).choices[0].message.content
+)
+```
+
+- Only a **SHA-256 hash** of the token is stored (shown once, never retrievable).
+- Bearer auth is accepted on `/api/models` and `/api/chat/completions`.
+- `/api/credentials` and `/api/keys` stay **session-only** — a leaked inference
+  token cannot add or revoke your provider keys.
+- Revoke from the same section; a revoked token → `401 UNAUTHENTICATED`.
+
 ---
 
 ## 6. Confirm keys are encrypted at rest
@@ -181,6 +214,7 @@ plaintext key appears in responses.
 - [ ] `POST /api/chat/completions` returns a real completion for **Groq**.
 - [ ] `POST /api/chat/completions` returns a real completion for **Gemini**.
 - [ ] Streaming returns `chat.completion.chunk` SSE frames.
+- [ ] An API token is shown once; a `Bearer` call to `chat/completions` succeeds; a revoked token returns `401`.
 - [ ] D1 contains ciphertext only; removing a key deletes the row.
 - [ ] `npm run typecheck && npm test && npm run api:check` all pass.
 

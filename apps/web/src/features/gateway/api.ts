@@ -1,4 +1,11 @@
-import { Credential, CreateCredentialRequest, ModelList } from "@numbat/api";
+import {
+  ApiKey,
+  ApiKeyCreated,
+  CreateApiKeyRequest,
+  Credential,
+  CreateCredentialRequest,
+  ModelList,
+} from "@numbat/api";
 import { z } from "zod";
 
 async function errorMessage(res: Response, fallback: string): Promise<string> {
@@ -41,6 +48,33 @@ export async function listModels() {
     throw new Error(await errorMessage(res, "Failed to load models"));
   }
   return ModelList.parse(await res.json());
+}
+
+export async function listApiKeys() {
+  const res = await fetch("/api/keys");
+  if (!res.ok) {
+    throw new Error(await errorMessage(res, "Failed to load API keys"));
+  }
+  return z.array(ApiKey).parse(await res.json());
+}
+
+export async function createApiKey(input: CreateApiKeyRequest) {
+  const res = await fetch("/api/keys", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(await errorMessage(res, "Failed to create API key"));
+  }
+  return ApiKeyCreated.parse(await res.json());
+}
+
+export async function revokeApiKey(id: string) {
+  const res = await fetch(`/api/keys/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    throw new Error(await errorMessage(res, "Failed to revoke API key"));
+  }
 }
 
 export interface ChatOutcome {

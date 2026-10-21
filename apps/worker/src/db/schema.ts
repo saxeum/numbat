@@ -47,6 +47,27 @@ export const providerCredentials = sqliteTable(
 );
 
 /**
+ * Gateway API keys for programmatic access (KAN-28). Only a SHA-256 hash of the
+ * token is stored; the token is shown once at creation.
+ */
+export const apiKeys = sqliteTable(
+  "api_keys",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    prefix: text("prefix").notNull(),
+    hash: text("hash").notNull().unique(),
+    createdAt: text("created_at").notNull(),
+    lastUsedAt: text("last_used_at"),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [index("api_keys_ownerId_idx").on(table.ownerId)],
+);
+
+/**
  * Static free-tier model catalog for the POC (seeded in D1; not live-probed).
  */
 export const freeModels = sqliteTable(

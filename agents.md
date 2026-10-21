@@ -48,6 +48,8 @@ backend, deployed to Cloudflare Workers.
   and [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md) (GCP setup).
 - **Incident response:** see [`docs/incident-response.md`](docs/incident-response.md)
   (severity, rollback, D1 recovery, comms).
+- **Rate limiting:** see [`docs/rate-limiting.md`](docs/rate-limiting.md)
+  (how it works, how to test it, Cloudflare console links).
 
 ## Verified CLI Access
 

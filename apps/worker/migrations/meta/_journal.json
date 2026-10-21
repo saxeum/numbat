@@ -22,6 +22,13 @@
       "when": 1792541852801,
       "tag": "0002_seed_free_models",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792544656656,
+      "tag": "0003_api_keys",
+      "breakpoints": true
     }
   ]
 }
