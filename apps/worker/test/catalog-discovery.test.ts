@@ -101,6 +101,52 @@ describe("catalog discovery (parseModels)", () => {
     ]);
   });
 
+  it("drops Gemini image, speech, music and research models", () => {
+    const listed = [
+      "antigravity-preview-latest",
+      "deep-research-max-preview-04-2026",
+      "gemini-2.5-flash-image",
+      "gemini-2.5-pro-preview-tts",
+      "gemini-3-pro-image",
+      "gemini-3.5-transcribe",
+      "lyria-3-pro-preview",
+      "nano-banana-pro-preview",
+    ];
+    const models = parseModels(DISCOVERY_SPECS.gemini, {
+      models: [
+        ...listed.map((id) => ({
+          name: `models/${id}`,
+          supportedGenerationMethods: ["generateContent", "countTokens"],
+        })),
+        {
+          name: "models/gemini-3.5-flash",
+          displayName: "Gemini 3.5 Flash",
+          supportedGenerationMethods: ["generateContent", "countTokens"],
+        },
+      ],
+    });
+
+    expect(models.map((model) => model.id)).toEqual(["gemini-3.5-flash"]);
+  });
+
+  it("drops NVIDIA safety, translation and retrieval models", () => {
+    const models = parseModels(DISCOVERY_SPECS.nvidia, {
+      data: [
+        { id: "nvidia/llama-3.1-nemotron-safety-guard-8b-v3" },
+        { id: "nvidia/nemotron-3.5-content-safety" },
+        { id: "nvidia/riva-translate-4b-instruct-v2" },
+        { id: "nvidia/ising-calibration-1.5-31b" },
+        { id: "nvidia/nemotron-3-ultra-550b-a55b" },
+        { id: "meta/llama-3.1-8b-instruct" },
+      ],
+    });
+
+    expect(models.map((model) => model.id)).toEqual([
+      "meta/llama-3.1-8b-instruct",
+      "nvidia/nemotron-3-ultra-550b-a55b",
+    ]);
+  });
+
   it("leaves probe-strategy providers unclassified", () => {
     const models = parseModels(DISCOVERY_SPECS.nvidia, {
       data: [

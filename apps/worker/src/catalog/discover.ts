@@ -17,8 +17,56 @@ export interface DiscoveredModel {
 /** Groq's `/models` also lists audio and guard models; those are not chat. */
 const GROQ_NON_CHAT = ["whisper", "orpheus", "prompt-guard", "tts"];
 
+/**
+ * Gemini advertises image, music, speech, embedding and agent models through
+ * the same `generateContent` method as chat models, so method support alone is
+ * not enough. These families cannot serve a text chat completion (they return
+ * 400, or 429 on the free tier) and must never enter the chat catalog.
+ */
+const GEMINI_NON_CHAT = [
+  "image",
+  "imagen",
+  "tts",
+  "audio",
+  "lyria",
+  "nano-banana",
+  "deep-research",
+  "computer-use",
+  "embedding",
+  "aqa",
+  "veo",
+  "transcribe",
+  // Agent/IDE models exposed through the Interactions API only; they reject
+  // `generateContent` with 400. See "antigravity-preview-*" in Gemini /models.
+  "antigravity",
+];
+
+/** NVIDIA NIM lists safety, translation and retrieval models beside LLMs. */
+const NVIDIA_NON_CHAT = [
+  "safety",
+  "guard",
+  "translate",
+  "riva",
+  "calibration",
+  "embed",
+  "rerank",
+  "ocr",
+  "tts",
+  "asr",
+];
+
 function isGroqChatModel(id: string): boolean {
   return !GROQ_NON_CHAT.some((token) => id.includes(token));
+}
+
+function isGeminiChatModel(id: string): boolean {
+  const value = id.toLowerCase();
+  return !GEMINI_NON_CHAT.some((token) => value.includes(token));
+}
+
+function isNvidiaChatModel(id: string): boolean {
+  const value = id.toLowerCase();
+  return !NVIDIA_NON_CHAT.some((token) => value.includes(token));
 }
 
 /** OpenRouter prices are strings; free iff prompt and completion are both "0". */
@@ -63,6 +111,7 @@ function fromOpenAI(spec: DiscoverySpec, json: unknown): DiscoveredModel[] {
     const id = typeof row.id === "string" ? row.id : undefined;
     if (!id) continue;
     if (spec.id === "groq" && !isGroqChatModel(id)) continue;
+    if (spec.id === "nvidia" && !isNvidiaChatModel(id)) continue;
 
     let free: boolean | null = null;
     let note: string | undefined;
@@ -102,7 +151,7 @@ function fromGemini(spec: DiscoverySpec, json: unknown): DiscoveredModel[] {
     if (!methods.includes("generateContent")) continue;
 
     const id = name.replace(/^models\//, "");
-    if (!id) continue;
+    if (!id || !isGeminiChatModel(id)) continue;
 
     out.push({
       id,
