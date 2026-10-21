@@ -1,70 +1,238 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router";
+import {
+  ArrowRight,
+  Globe,
+  KeyRound,
+  PlugZap,
+  ShieldCheck,
+  Terminal,
+  Zap,
+} from "lucide-react";
 
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { getHealth } from "@/lib/api";
 
-const statusDot = {
-  checking: "bg-muted-foreground",
-  online: "bg-emerald-500",
-  offline: "bg-destructive",
-} as const;
+const providers = ["Groq", "Google Gemini", "OpenAI-compatible", "Cloudflare"];
 
-export function HomePage() {
-  const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
+const features = [
+  {
+    icon: Terminal,
+    title: "OpenAI-compatible",
+    body: "The chat endpoint speaks the OpenAI wire format, so existing SDKs and tools work with one base URL change.",
+  },
+  {
+    icon: PlugZap,
+    title: "Bring your own key",
+    body: "Connect a Groq or Google Gemini key from the dashboard. Foonix verifies it against the provider before saving.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Encrypted key vault",
+    body: "Provider credentials are sealed with envelope encryption and never shown again — not even to you.",
+  },
+  {
+    icon: KeyRound,
+    title: "Scoped API tokens",
+    body: "Issue bearer tokens for CLI and server access, then revoke them at any time from one place.",
+  },
+  {
+    icon: Zap,
+    title: "Streaming responses",
+    body: "Ask for server-sent events and stream tokens back to your users as the provider generates them.",
+  },
+  {
+    icon: Globe,
+    title: "Same-origin, no CORS",
+    body: "The dashboard and the API share one origin, so there is nothing to configure and no preflights to debug.",
+  },
+];
 
-  const status = health.isPending
-    ? "checking"
-    : health.isError
-      ? "offline"
-      : "online";
-  const label =
-    status === "checking"
-      ? "Checking API…"
-      : status === "offline"
-        ? "API offline"
-        : "API online";
+const steps = [
+  {
+    n: "01",
+    title: "Connect a provider key",
+    body: "Paste a Groq or Gemini key. Foonix verifies it, then stores it encrypted.",
+  },
+  {
+    n: "02",
+    title: "Create an API token",
+    body: "Mint a bearer token for your app or CLI from the gateway dashboard.",
+  },
+  {
+    n: "03",
+    title: "Call the gateway",
+    body: "POST to /api/chat/completions with any OpenAI-compatible client.",
+  },
+  {
+    n: "04",
+    title: "Swap models freely",
+    body: "Pick from the catalog per request — no code changes, no new SDK.",
+  },
+];
+
+function quickstart(origin: string) {
+  return `curl ${origin}/api/chat/completions \\
+  -H "authorization: Bearer $FOONIX_KEY" \\
+  -H 'content-type: application/json' \\
+  -d '{"model":"openai/gpt-oss-20b",
+       "messages":[{"role":"user","content":"pong"}]}'`;
+}
+
+function TerminalCard() {
+  const [copied, setCopied] = useState(false);
+  const origin =
+    typeof window === "undefined"
+      ? "https://foonix.net"
+      : window.location.origin;
+  const snippet = quickstart(origin);
+
+  async function copy() {
+    await navigator.clipboard.writeText(snippet);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   return (
-    <main className="grid min-h-svh place-items-center bg-background px-6 py-16 text-foreground">
-      <section className="flex w-full max-w-lg flex-col items-center gap-6 text-center">
-        <span className="rounded-full border border-border px-3 py-1 text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
-          foonix.net
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]">
+      <div className="flex items-center gap-2 border-b border-border bg-white/[0.02] px-4 py-3">
+        <span className="size-2.5 rounded-full bg-[#ff5f57]" />
+        <span className="size-2.5 rounded-full bg-[#febc2e]" />
+        <span className="size-2.5 rounded-full bg-[#28c840]" />
+        <span className="ml-2 font-mono text-xs text-muted-foreground">
+          quickstart.sh
         </span>
-        <h1 className="text-5xl font-semibold tracking-tight">numbat</h1>
-        <p className="text-balance text-muted-foreground">
-          A React SPA served by the web Worker, calling the Hono API on the same
-          origin. And I love fish.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button asChild>
-            <Link to="/gateway">Open gateway</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href="/api/health" target="_blank" rel="noreferrer">
-              API response
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <a
-              href="https://github.com/saxeum/numbat"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub
-            </a>
-          </Button>
-        </div>
-        <div>Eat more fish!</div>
-        <div>Eat my shorts!</div>
-        <p
-          className="inline-flex items-center gap-2 font-mono text-sm text-muted-foreground"
-          aria-live="polite"
+        <button
+          type="button"
+          onClick={copy}
+          className="ml-auto rounded-md border border-border px-2 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          <span className={`size-2 rounded-full ${statusDot[status]}`} />
-          {label}
-        </p>
-      </section>
-    </main>
+          {copied ? "copied" : "copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-5 font-mono text-[12.5px] leading-relaxed text-foreground/90">
+        {snippet}
+      </pre>
+      <div className="border-t border-border px-5 py-3 font-mono text-xs text-muted-foreground">
+        <span className="text-primary">200 OK</span> · routed via groq ·
+        streaming ready
+      </div>
+    </div>
+  );
+}
+
+export function HomePage() {
+  return (
+    <div className="flex min-h-svh flex-col">
+      <SiteHeader />
+
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-40 left-1/3 h-[560px] w-[720px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklch,var(--primary)_18%,transparent),transparent)]"
+          />
+          <div className="relative mx-auto grid w-full max-w-6xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
+            <div>
+              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.06] px-3 py-1.5 text-xs font-medium tracking-[0.14em] text-primary uppercase">
+                ● Open gateway · v1
+              </span>
+              <h1 className="text-5xl font-extrabold tracking-[-0.035em] text-balance sm:text-6xl">
+                One gateway.
+                <br />
+                <span className="bg-[linear-gradient(120deg,var(--primary),var(--brand-2))] bg-clip-text text-transparent">
+                  Every model.
+                </span>
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+                A single, OpenAI-compatible endpoint in front of your AI
+                providers. Connect a key, issue a token, and route chat requests
+                without touching your client code.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Button asChild size="lg">
+                  <Link to="/gateway">
+                    Open the gateway
+                    <ArrowRight />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <a href="/api/docs">Read the docs</a>
+                </Button>
+              </div>
+              <p className="mt-5 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  Bring your own key
+                </span>{" "}
+                · Works with Groq &amp; Gemini · No CORS to configure
+              </p>
+            </div>
+            <TerminalCard />
+          </div>
+        </section>
+
+        {/* Providers */}
+        <div className="border-y border-border py-7">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6 px-6">
+            <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
+              Works with
+            </span>
+            <div className="flex flex-wrap items-center gap-x-10 gap-y-3 text-lg font-bold tracking-tight text-muted-foreground/60">
+              {providers.map((provider) => (
+                <span key={provider}>{provider}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Features */}
+        <section className="mx-auto w-full max-w-6xl px-6 py-20">
+          <div className="mb-12 max-w-2xl">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Everything between your app and the provider
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Stop rebuilding gateway plumbing in every project. Foonix handles
+              the boring parts so you can ship.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/35"
+              >
+                <div className="mb-5 grid size-10 place-items-center rounded-xl border border-primary/20 bg-primary/[0.08] text-primary">
+                  <feature.icon className="size-5" />
+                </div>
+                <h3 className="text-base font-semibold">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {feature.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Steps */}
+        <section className="mx-auto w-full max-w-6xl px-6 pb-24">
+          <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((step) => (
+              <div key={step.n} className="bg-card p-7">
+                <span className="font-mono text-sm text-primary">{step.n}</span>
+                <h3 className="mt-3 text-base font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {step.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
   );
 }

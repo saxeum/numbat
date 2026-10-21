@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { BrandMark } from "@/components/brand";
+
 export function ErrorFallback({
   title = "Something went wrong",
   message = "An unexpected error occurred. Please try again.",
@@ -12,7 +14,8 @@ export function ErrorFallback({
   return (
     <main className="grid min-h-svh place-items-center bg-background px-6 py-16 text-foreground">
       <section className="flex max-w-md flex-col items-center gap-4 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+        <BrandMark className="size-11 text-lg" />
+        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
         <p className="text-muted-foreground">{message}</p>
         {children}
       </section>

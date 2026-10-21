@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 test("home page renders and reports the API online", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "numbat" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /one gateway/i }),
+  ).toBeVisible();
   await expect(page.getByText("API online")).toBeVisible();
 });
 
