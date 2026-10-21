@@ -89,3 +89,79 @@ export const ApiKeyCreated = z
   })
   .passthrough();
 export type ApiKeyCreated = z.infer<typeof ApiKeyCreated>;
+
+export const Conversation = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    model: z.string(),
+    provider: z.union([z.string(), z.null()]).optional(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .passthrough();
+export type Conversation = z.infer<typeof Conversation>;
+
+export const CreateConversationRequest = z
+  .object({
+    title: z.string().max(200),
+    model: z.string().max(200),
+    provider: z.string().max(64),
+  })
+  .partial();
+export type CreateConversationRequest = z.infer<
+  typeof CreateConversationRequest
+>;
+
+export const Message = z
+  .object({
+    id: z.string(),
+    conversationId: z.string(),
+    role: z.enum(["user", "assistant", "system"]),
+    content: z.string(),
+    model: z.union([z.string(), z.null()]).optional(),
+    provider: z.union([z.string(), z.null()]).optional(),
+    promptTokens: z.union([z.number(), z.null()]).optional(),
+    completionTokens: z.union([z.number(), z.null()]).optional(),
+    reasoningTokens: z.union([z.number(), z.null()]).optional(),
+    ttftMs: z.union([z.number(), z.null()]).optional(),
+    totalMs: z.union([z.number(), z.null()]).optional(),
+    stopped: z.boolean(),
+    createdAt: z.string(),
+  })
+  .passthrough();
+export type Message = z.infer<typeof Message>;
+
+export const ConversationDetail = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    model: z.string(),
+    provider: z.union([z.string(), z.null()]).optional(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    messages: z.array(Message),
+  })
+  .passthrough();
+export type ConversationDetail = z.infer<typeof ConversationDetail>;
+
+export const UpdateConversationRequest = z.object({
+  title: z.string().min(1).max(200),
+});
+export type UpdateConversationRequest = z.infer<
+  typeof UpdateConversationRequest
+>;
+
+export const CreateMessageRequest = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string(),
+  model: z.string().max(200).optional(),
+  provider: z.string().max(64).optional(),
+  promptTokens: z.number().int().gte(0).optional(),
+  completionTokens: z.number().int().gte(0).optional(),
+  reasoningTokens: z.number().int().gte(0).optional(),
+  ttftMs: z.number().int().gte(0).optional(),
+  totalMs: z.number().int().gte(0).optional(),
+  stopped: z.boolean().optional(),
+});
+export type CreateMessageRequest = z.infer<typeof CreateMessageRequest>;

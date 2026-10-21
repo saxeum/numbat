@@ -101,7 +101,8 @@ test("chat: send a message, stream a reply, and persist the conversation", async
   // Auto-titled conversation appears in the sidebar.
   await expect(page.getByRole("link", { name: "Say pong" })).toBeVisible();
 
-  // Persists across a reload (localStorage for P0).
+  // Persists across a reload (server-side, D1 — KAN-39).
+  await page.waitForTimeout(1200);
   await page.reload();
   await expect(page.getByText("ready when you are.")).toBeVisible({
     timeout: 15_000,

@@ -1,32 +1,8 @@
-import type { TokenUsage } from "@/features/gateway/api";
+import type { Conversation, Message } from "@numbat/api";
+
+export type { Conversation, Message };
 
 export type ChatRole = "user" | "assistant" | "system";
-
-export interface ChatMessage {
-  id: string;
-  role: ChatRole;
-  content: string;
-  createdAt: number;
-  /** Assistant metadata (provider/model + performance). */
-  provider?: string | null;
-  model?: string;
-  ttftMs?: number | null;
-  totalMs?: number;
-  tokens?: number | null;
-  tps?: number | null;
-  usage?: TokenUsage | null;
-  stopped?: boolean;
-}
-
-export interface Conversation {
-  id: string;
-  title: string;
-  model: string;
-  provider?: string | null;
-  createdAt: number;
-  updatedAt: number;
-  messages: ChatMessage[];
-}
 
 export type ChatRequestMessage = {
   role: ChatRole;

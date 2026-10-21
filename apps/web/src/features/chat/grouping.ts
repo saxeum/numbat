@@ -1,4 +1,4 @@
-import type { Conversation } from "@/features/chat/types";
+import type { Conversation } from "@numbat/api";
 
 const DAY_MS = 86_400_000;
 
@@ -29,14 +29,15 @@ export function groupConversations(
     Older: [],
   };
 
-  for (const conversation of [...list].sort(
-    (a, b) => b.updatedAt - a.updatedAt,
-  )) {
-    if (conversation.updatedAt >= today) buckets.Today.push(conversation);
-    else if (conversation.updatedAt >= yesterday)
-      buckets.Yesterday.push(conversation);
-    else if (conversation.updatedAt >= weekAgo)
-      buckets["Previous 7 days"].push(conversation);
+  const sorted = [...list].sort(
+    (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
+  );
+
+  for (const conversation of sorted) {
+    const ts = Date.parse(conversation.updatedAt);
+    if (ts >= today) buckets.Today.push(conversation);
+    else if (ts >= yesterday) buckets.Yesterday.push(conversation);
+    else if (ts >= weekAgo) buckets["Previous 7 days"].push(conversation);
     else buckets.Older.push(conversation);
   }
 

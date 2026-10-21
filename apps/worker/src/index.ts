@@ -9,6 +9,7 @@ import { rateLimit } from "./api/middleware/rate-limit";
 import { requestId } from "./api/middleware/request-id";
 import { securityHeaders } from "./api/middleware/security";
 import { chat } from "./api/routes/chat";
+import { conversations } from "./api/routes/conversations";
 import { credentials } from "./api/routes/credentials";
 import { health } from "./api/routes/health";
 import { keys } from "./api/routes/keys";
@@ -40,6 +41,7 @@ export function createApp() {
   api.route("/credentials", credentials);
   api.route("/models", models);
   api.route("/chat", chat);
+  api.route("/conversations", conversations);
   api.route("/keys", keys);
   // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.
   // Authenticated only: browser navigations are redirected to sign-in.

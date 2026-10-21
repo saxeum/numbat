@@ -82,3 +82,59 @@ export const freeModels = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.provider, table.modelId] })],
 );
+
+/**
+ * Chat conversations and messages (KAN-39). Owner-scoped; a conversation and
+ * its messages cascade-delete with the user. Assistant messages persist the
+ * provider/model and performance metadata (TTFT, tokens).
+ */
+export const conversations = sqliteTable(
+  "conversations",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default(""),
+    model: text("model").notNull().default(""),
+    provider: text("provider"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("conversations_ownerId_updatedAt_idx").on(
+      table.ownerId,
+      table.updatedAt,
+    ),
+  ],
+);
+
+export const messages = sqliteTable(
+  "messages",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    model: text("model"),
+    provider: text("provider"),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    ttftMs: integer("ttft_ms"),
+    totalMs: integer("total_ms"),
+    stopped: integer("stopped", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("messages_conversationId_createdAt_idx").on(
+      table.conversationId,
+      table.createdAt,
+    ),
+  ],
+);

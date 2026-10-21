@@ -2,24 +2,43 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { BrandMark } from "@/components/brand";
-import type { ChatMessage } from "@/features/chat/types";
+import type { Message } from "@numbat/api";
 
-function usageSummary(message: ChatMessage): string | null {
+function usageSummary(message: Message): string | null {
   const parts: string[] = [];
   if (message.ttftMs != null)
     parts.push(`TTFT ${Math.round(message.ttftMs)} ms`);
-  if (message.tps != null) parts.push(`TPS ${message.tps.toFixed(1)}`);
-  if (message.usage) {
-    const { prompt, completion, reasoning } = message.usage;
-    const inOut = `in ${prompt ?? "—"} · out ${completion ?? "—"}`;
-    parts.push(reasoning != null ? `${inOut} (reasoning ${reasoning})` : inOut);
-  } else if (message.tokens != null) {
-    parts.push(`${message.tokens} tok`);
+
+  const completion = message.completionTokens ?? null;
+  if (
+    completion != null &&
+    message.totalMs != null &&
+    message.ttftMs != null &&
+    message.totalMs > message.ttftMs
+  ) {
+    const tps = completion / ((message.totalMs - message.ttftMs) / 1000);
+    if (Number.isFinite(tps) && tps > 0) parts.push(`TPS ${tps.toFixed(1)}`);
   }
+
+  if (
+    message.promptTokens != null ||
+    message.completionTokens != null ||
+    message.reasoningTokens != null
+  ) {
+    const inOut = `in ${message.promptTokens ?? "—"} · out ${message.completionTokens ?? "—"}`;
+    parts.push(
+      message.reasoningTokens != null
+        ? `${inOut} (reasoning ${message.reasoningTokens})`
+        : inOut,
+    );
+  } else if (completion != null) {
+    parts.push(`${completion} tok`);
+  }
+
   return parts.length ? parts.join(" · ") : null;
 }
 
-export function MessageItem({ message }: { message: ChatMessage }) {
+export function MessageItem({ message }: { message: Message }) {
   const [copied, setCopied] = useState(false);
 
   if (message.role === "user") {

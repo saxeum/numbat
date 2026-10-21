@@ -24,6 +24,10 @@
     {
       "name": "gateway",
       "description": "BYOK provider credentials and routing"
+    },
+    {
+      "name": "chat",
+      "description": "Persisted chat conversations and messages"
     }
   ],
   "paths": {
@@ -455,6 +459,239 @@
           }
         }
       }
+    },
+    "/conversations": {
+      "get": {
+        "operationId": "listConversations",
+        "tags": [
+          "chat"
+        ],
+        "summary": "List the caller's conversations",
+        "description": "Metadata only (no messages), newest first.",
+        "responses": {
+          "200": {
+            "description": "The caller's conversations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Conversation"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createConversation",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Create a conversation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConversationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/conversations/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "get": {
+        "operationId": "getConversation",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Get a conversation with its messages",
+        "responses": {
+          "200": {
+            "description": "The conversation and its messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateConversation",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Rename a conversation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConversationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteConversation",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Delete a conversation and its messages",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "post": {
+        "operationId": "createMessage",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Append a message to a conversation",
+        "description": "Persists a user or assistant turn. Assistant turns carry the\nprovider/model and performance metadata (TTFT, token usage).\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -482,6 +719,15 @@
         }
       },
       "CredentialId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "ConversationId": {
         "name": "id",
         "in": "path",
         "required": true,
@@ -777,6 +1023,241 @@
             "items": {
               "$ref": "#/components/schemas/Model"
             }
+          }
+        }
+      },
+      "Conversation": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "model",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "id",
+          "conversationId",
+          "role",
+          "content",
+          "stopped",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "promptTokens": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "completionTokens": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reasoningTokens": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ttftMs": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "totalMs": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "stopped": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      },
+      "ConversationDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "model",
+          "createdAt",
+          "updatedAt",
+          "messages"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        }
+      },
+      "CreateConversationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 64
+          }
+        }
+      },
+      "UpdateConversationRequest": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "CreateMessageRequest": {
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "promptTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completionTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reasoningTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ttftMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stopped": {
+            "type": "boolean"
           }
         }
       },

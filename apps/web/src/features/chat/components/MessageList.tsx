@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 
+import type { Message } from "@numbat/api";
 import { MessageItem } from "@/features/chat/components/MessageItem";
-import type { ChatMessage } from "@/features/chat/types";
 
 interface Props {
-  messages: ChatMessage[];
+  messages: Message[];
   streaming: boolean;
   liveText: string;
   liveMetrics: { ttftMs: number | null; tokens: number };
@@ -32,13 +32,15 @@ export function MessageList({
     if (el && stickRef.current) el.scrollTop = el.scrollHeight;
   }, [messages, liveText, streaming]);
 
-  const liveMessage: ChatMessage = {
+  const liveMessage: Message = {
     id: "__live__",
+    conversationId: "",
     role: "assistant",
     content: liveText,
-    createdAt: 0,
+    completionTokens: liveMetrics.tokens || null,
     ttftMs: liveMetrics.ttftMs,
-    tokens: liveMetrics.tokens || null,
+    stopped: false,
+    createdAt: "",
   };
 
   return (

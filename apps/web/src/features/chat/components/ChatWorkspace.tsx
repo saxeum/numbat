@@ -1,32 +1,43 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+import { useSession } from "@/features/auth/client";
 import { Composer } from "@/features/chat/components/Composer";
 import { ConversationSidebar } from "@/features/chat/components/ConversationSidebar";
 import { EmptyState } from "@/features/chat/components/EmptyState";
 import { MessageList } from "@/features/chat/components/MessageList";
 import {
-  appendMessage,
-  createConversation,
-  deleteConversation,
+  useConversation,
   useConversations,
-} from "@/features/chat/store";
+  useCreateConversation,
+  useCreateMessage,
+  useDeleteConversation,
+} from "@/features/chat/hooks";
+import { deriveTitle, type ChatRequestMessage } from "@/features/chat/types";
 import { useChatStream } from "@/features/chat/useChatStream";
-import type { ChatMessage, ChatRequestMessage } from "@/features/chat/types";
 
 export function ChatWorkspace() {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
-  const conversations = useConversations();
+  const { data: session } = useSession();
+  const authed = Boolean(session);
+
+  const conversationsQuery = useConversations(authed);
+  const conversationQuery = useConversation(conversationId, authed);
+  const createConversation = useCreateConversation();
+  const createMessage = useCreateMessage();
+  const deleteConversation = useDeleteConversation();
   const { streaming, liveText, liveMetrics, send, cancel } = useChatStream();
 
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const activeConversation =
-    conversations.find((c) => c.id === conversationId) ?? null;
+  const conversations = conversationsQuery.data ?? [];
+  const activeConversation = conversationQuery.data ?? null;
   const messages = activeConversation?.messages ?? [];
   const isEmpty = messages.length === 0;
+  const loadingConversation =
+    Boolean(conversationId) && conversationQuery.isPending;
 
   function onNew() {
     setError(null);
@@ -35,7 +46,7 @@ export function ChatWorkspace() {
   }
 
   function onDelete(id: string) {
-    deleteConversation(id);
+    deleteConversation.mutate(id);
     if (id === conversationId) navigate("/gateway/chat");
   }
 
@@ -44,23 +55,24 @@ export function ChatWorkspace() {
     if (!text || streaming) return;
     setError(null);
 
-    let conversation = activeConversation;
-    if (!conversation) {
-      conversation = createConversation(model);
-      navigate(`/gateway/chat/${conversation.id}`, { replace: true });
+    let id = conversationId;
+    if (!id) {
+      const created = await createConversation.mutateAsync({
+        title: deriveTitle(text),
+        model,
+      });
+      id = created.id;
+      navigate(`/gateway/chat/${id}`, { replace: true });
     }
 
-    const history: ChatRequestMessage[] = conversation.messages
+    const history: ChatRequestMessage[] = messages
       .filter((message) => message.role !== "system")
       .map((message) => ({ role: message.role, content: message.content }));
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: text,
-      createdAt: Date.now(),
-    };
-    appendMessage(conversation.id, userMessage);
+    await createMessage.mutateAsync({
+      conversationId: id,
+      input: { role: "user", content: text },
+    });
     setInput("");
 
     try {
@@ -69,19 +81,21 @@ export function ChatWorkspace() {
         messages: [...history, { role: "user", content: text }],
         stream,
       });
-      appendMessage(conversation.id, {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: result.content,
-        createdAt: Date.now(),
-        provider: result.provider,
-        model: result.model,
-        ttftMs: result.ttftMs,
-        totalMs: result.totalMs,
-        tokens: result.tokens,
-        tps: result.tps,
-        usage: result.usage,
-        stopped: result.stopped,
+      await createMessage.mutateAsync({
+        conversationId: id,
+        input: {
+          role: "assistant",
+          content: result.content,
+          model: result.model,
+          provider: result.provider ?? undefined,
+          promptTokens: result.usage?.prompt ?? undefined,
+          completionTokens:
+            result.usage?.completion ?? result.tokens ?? undefined,
+          reasoningTokens: result.usage?.reasoning ?? undefined,
+          ttftMs: result.ttftMs != null ? Math.round(result.ttftMs) : undefined,
+          totalMs: Math.round(result.totalMs),
+          stopped: result.stopped,
+        },
       });
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Chat failed");
@@ -98,7 +112,11 @@ export function ChatWorkspace() {
       />
 
       <div className="flex h-[72svh] min-h-[28rem] flex-col overflow-hidden rounded-2xl border border-border bg-card lg:h-[calc(100svh-16rem)]">
-        {isEmpty ? (
+        {loadingConversation ? (
+          <div className="grid flex-1 place-items-center">
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          </div>
+        ) : isEmpty ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-8 overflow-y-auto p-6">
             <EmptyState onPick={setInput} />
             <div className="w-full max-w-2xl">
