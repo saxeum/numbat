@@ -77,3 +77,17 @@ export async function createMessage(
   }
   return Message.parse(await res.json());
 }
+
+/** Delete a message and everything after it (edit / regenerate). */
+export async function truncateFromMessage(
+  conversationId: string,
+  messageId: string,
+) {
+  const res = await fetch(
+    `/api/conversations/${conversationId}/messages/${messageId}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    throw new Error(await errorMessage(res, "Failed to rewind conversation"));
+  }
+}

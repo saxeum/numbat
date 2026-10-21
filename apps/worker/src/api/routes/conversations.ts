@@ -15,6 +15,7 @@ import {
   listMessages,
   renameConversation,
   touchConversation,
+  truncateFromMessage,
 } from "../../db/queries/conversations";
 import { requireSession } from "../middleware/auth";
 import { AppError } from "../middleware/error";
@@ -128,3 +129,25 @@ conversations.post(
     return c.json(row, 201);
   },
 );
+
+// Delete a message and everything after it (edit / regenerate).
+conversations.delete("/:id/messages/:messageId", async (c) => {
+  const id = c.req.param("id");
+  const messageId = c.req.param("messageId");
+  const ownerId = c.get("userId");
+  const db = createDb(c.env.DB);
+
+  const conversation = await getConversation(db, ownerId, id);
+  if (!conversation) throw notFound(id);
+
+  const truncated = await truncateFromMessage(db, ownerId, id, messageId);
+  if (!truncated) {
+    throw new AppError(
+      404,
+      "MESSAGE_NOT_FOUND",
+      `Message ${messageId} not found`,
+    );
+  }
+  await touchConversation(db, ownerId, id, new Date().toISOString());
+  return c.body(null, 204);
+});

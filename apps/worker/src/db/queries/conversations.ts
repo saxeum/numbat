@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "../client";
 import { conversations, messages } from "../schema";
@@ -163,6 +163,41 @@ export async function touchConversation(
     .update(conversations)
     .set({ updatedAt })
     .where(and(eq(conversations.ownerId, ownerId), eq(conversations.id, id)));
+}
+
+/**
+ * Delete a message and every message appended after it (edit / regenerate).
+ * Uses SQLite `rowid` so ordering is insertion order, not timestamp order.
+ */
+export async function truncateFromMessage(
+  db: Database,
+  ownerId: string,
+  conversationId: string,
+  messageId: string,
+): Promise<boolean> {
+  const [target] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.ownerId, ownerId),
+        eq(messages.conversationId, conversationId),
+        eq(messages.id, messageId),
+      ),
+    )
+    .limit(1);
+  if (!target) return false;
+
+  await db
+    .delete(messages)
+    .where(
+      and(
+        eq(messages.ownerId, ownerId),
+        eq(messages.conversationId, conversationId),
+        sql`rowid >= (SELECT rowid FROM messages WHERE id = ${messageId})`,
+      ),
+    );
+  return true;
 }
 
 export async function deleteConversation(

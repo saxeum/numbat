@@ -26,9 +26,11 @@ const PROVIDER_LABELS: Record<string, string> = {
 interface Props {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: (input: { model: string; stream: boolean }) => void;
+  onSubmit: (input: { model: string }) => void;
   streaming: boolean;
   onStop: () => void;
+  stream: boolean;
+  onStreamChange: (stream: boolean) => void;
   autoFocus?: boolean;
 }
 
@@ -38,6 +40,8 @@ export function Composer({
   onSubmit,
   streaming,
   onStop,
+  stream,
+  onStreamChange,
   autoFocus,
 }: Props) {
   const { data: session } = useSession();
@@ -45,7 +49,6 @@ export function Composer({
   const models = useModels(Boolean(session));
 
   const [model, setModel] = useState("");
-  const [stream, setStream] = useState(true);
   const [selectedProviders, setSelectedProviders] = useState<string[] | null>(
     null,
   );
@@ -85,7 +88,7 @@ export function Composer({
 
   function submit() {
     if (streaming || !value.trim() || !effectiveModel) return;
-    onSubmit({ model: effectiveModel, stream });
+    onSubmit({ model: effectiveModel });
   }
 
   function onFormSubmit(event: FormEvent) {
@@ -216,7 +219,9 @@ export function Composer({
                 <Checkbox
                   id="stream"
                   checked={stream}
-                  onCheckedChange={(checked) => setStream(checked === true)}
+                  onCheckedChange={(checked) =>
+                    onStreamChange(checked === true)
+                  }
                 />
                 <span>Stream response</span>
               </label>

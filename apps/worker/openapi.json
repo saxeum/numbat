@@ -692,6 +692,41 @@
           }
         }
       }
+    },
+    "/conversations/{id}/messages/{messageId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        },
+        {
+          "$ref": "#/components/parameters/MessageId"
+        }
+      ],
+      "delete": {
+        "operationId": "truncateConversationMessages",
+        "tags": [
+          "chat"
+        ],
+        "summary": "Delete a message and everything after it",
+        "description": "Used by edit / regenerate to rewind a conversation.",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -729,6 +764,15 @@
       },
       "ConversationId": {
         "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "MessageId": {
+        "name": "messageId",
         "in": "path",
         "required": true,
         "schema": {

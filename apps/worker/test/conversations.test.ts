@@ -133,6 +133,54 @@ describe("conversations (authenticated)", () => {
     });
   });
 
+  it("truncates a message and everything after it", async () => {
+    const cookie = await signUp("conv-truncate@example.com");
+    const conversation = await createConversation(cookie, "Truncate");
+
+    for (const [role, content] of [
+      ["user", "one"],
+      ["assistant", "two"],
+      ["user", "three"],
+    ] as const) {
+      const res = await SELF.fetch(`${base}/${conversation.id}/messages`, {
+        method: "POST",
+        headers: authed(cookie),
+        body: JSON.stringify({ role, content }),
+      });
+      expect(res.status).toBe(201);
+    }
+
+    const detail = await SELF.fetch(`${base}/${conversation.id}`, {
+      headers: { cookie },
+    });
+    const body = (await detail.json()) as {
+      messages: { id: string; content: string }[];
+    };
+    expect(body.messages.map((message) => message.content)).toEqual([
+      "one",
+      "two",
+      "three",
+    ]);
+
+    // Delete the second message and everything after it.
+    const target = body.messages[1]!;
+    const deleted = await SELF.fetch(
+      `${base}/${conversation.id}/messages/${target.id}`,
+      { method: "DELETE", headers: { cookie } },
+    );
+    expect(deleted.status).toBe(204);
+
+    const after = await SELF.fetch(`${base}/${conversation.id}`, {
+      headers: { cookie },
+    });
+    const afterBody = (await after.json()) as {
+      messages: { content: string }[];
+    };
+    expect(afterBody.messages.map((message) => message.content)).toEqual([
+      "one",
+    ]);
+  });
+
   it("is owner-scoped", async () => {
     const alice = await signUp("conv-alice@example.com");
     const bob = await signUp("conv-bob@example.com");

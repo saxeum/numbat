@@ -11,6 +11,7 @@ import {
   getConversation,
   listConversations,
   renameConversation,
+  truncateFromMessage,
 } from "./api";
 
 export function useConversations(enabled: boolean) {
@@ -67,6 +68,25 @@ export function useCreateMessage() {
       conversationId: string;
       input: CreateMessageRequest;
     }) => createMessage(conversationId, input),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["conversations", variables.conversationId],
+      });
+    },
+  });
+}
+
+export function useTruncateFromMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+      messageId,
+    }: {
+      conversationId: string;
+      messageId: string;
+    }) => truncateFromMessage(conversationId, messageId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       queryClient.invalidateQueries({

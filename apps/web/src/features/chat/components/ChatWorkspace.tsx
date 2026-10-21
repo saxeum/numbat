@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+import type { Message } from "@numbat/api";
 import { useSession } from "@/features/auth/client";
 import { Composer } from "@/features/chat/components/Composer";
 import { ConversationSidebar } from "@/features/chat/components/ConversationSidebar";
@@ -12,9 +13,26 @@ import {
   useCreateConversation,
   useCreateMessage,
   useDeleteConversation,
+  useRenameConversation,
+  useTruncateFromMessage,
 } from "@/features/chat/hooks";
 import { deriveTitle, type ChatRequestMessage } from "@/features/chat/types";
-import { useChatStream } from "@/features/chat/useChatStream";
+import { useChatStream, type SendResult } from "@/features/chat/useChatStream";
+
+function assistantInput(result: SendResult) {
+  return {
+    role: "assistant" as const,
+    content: result.content,
+    model: result.model,
+    provider: result.provider ?? undefined,
+    promptTokens: result.usage?.prompt ?? undefined,
+    completionTokens: result.usage?.completion ?? result.tokens ?? undefined,
+    reasoningTokens: result.usage?.reasoning ?? undefined,
+    ttftMs: result.ttftMs != null ? Math.round(result.ttftMs) : undefined,
+    totalMs: Math.round(result.totalMs),
+    stopped: result.stopped,
+  };
+}
 
 export function ChatWorkspace() {
   const { conversationId } = useParams<{ conversationId?: string }>();
@@ -27,9 +45,12 @@ export function ChatWorkspace() {
   const createConversation = useCreateConversation();
   const createMessage = useCreateMessage();
   const deleteConversation = useDeleteConversation();
+  const renameConversation = useRenameConversation();
+  const truncate = useTruncateFromMessage();
   const { streaming, liveText, liveMetrics, send, cancel } = useChatStream();
 
   const [input, setInput] = useState("");
+  const [stream, setStream] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const conversations = conversationsQuery.data ?? [];
@@ -50,7 +71,29 @@ export function ChatWorkspace() {
     if (id === conversationId) navigate("/gateway/chat");
   }
 
-  async function onSend({ model, stream }: { model: string; stream: boolean }) {
+  function onRename(id: string, title: string) {
+    renameConversation.mutate({ id, title });
+  }
+
+  function toHistory(list: Message[]): ChatRequestMessage[] {
+    return list
+      .filter((message) => message.role !== "system")
+      .map((message) => ({ role: message.role, content: message.content }));
+  }
+
+  async function runCompletion(
+    id: string,
+    history: ChatRequestMessage[],
+    model: string,
+  ) {
+    const result = await send({ model, messages: history, stream });
+    await createMessage.mutateAsync({
+      conversationId: id,
+      input: assistantInput(result),
+    });
+  }
+
+  async function onSend({ model }: { model: string }) {
     const text = input.trim();
     if (!text || streaming) return;
     setError(null);
@@ -65,10 +108,7 @@ export function ChatWorkspace() {
       navigate(`/gateway/chat/${id}`, { replace: true });
     }
 
-    const history: ChatRequestMessage[] = messages
-      .filter((message) => message.role !== "system")
-      .map((message) => ({ role: message.role, content: message.content }));
-
+    const history = toHistory(messages);
     await createMessage.mutateAsync({
       conversationId: id,
       input: { role: "user", content: text },
@@ -76,29 +116,65 @@ export function ChatWorkspace() {
     setInput("");
 
     try {
-      const result = await send({
+      await runCompletion(
+        id,
+        [...history, { role: "user", content: text }],
         model,
-        messages: [...history, { role: "user", content: text }],
-        stream,
-      });
-      await createMessage.mutateAsync({
-        conversationId: id,
-        input: {
-          role: "assistant",
-          content: result.content,
-          model: result.model,
-          provider: result.provider ?? undefined,
-          promptTokens: result.usage?.prompt ?? undefined,
-          completionTokens:
-            result.usage?.completion ?? result.tokens ?? undefined,
-          reasoningTokens: result.usage?.reasoning ?? undefined,
-          ttftMs: result.ttftMs != null ? Math.round(result.ttftMs) : undefined,
-          totalMs: Math.round(result.totalMs),
-          stopped: result.stopped,
-        },
-      });
+      );
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Chat failed");
+    }
+  }
+
+  async function onRegenerate(message: Message) {
+    if (!activeConversation || streaming) return;
+    const index = activeConversation.messages.findIndex(
+      (m) => m.id === message.id,
+    );
+    if (index < 0) return;
+    setError(null);
+    const history = toHistory(activeConversation.messages.slice(0, index));
+    try {
+      await truncate.mutateAsync({
+        conversationId: activeConversation.id,
+        messageId: message.id,
+      });
+      await runCompletion(
+        activeConversation.id,
+        history,
+        message.model ?? activeConversation.model,
+      );
+    } catch (regenerateError) {
+      setError(
+        regenerateError instanceof Error ? regenerateError.message : "Failed",
+      );
+    }
+  }
+
+  async function onEdit(message: Message, content: string) {
+    if (!activeConversation || streaming || !content.trim()) return;
+    const index = activeConversation.messages.findIndex(
+      (m) => m.id === message.id,
+    );
+    if (index < 0) return;
+    setError(null);
+    const history = toHistory(activeConversation.messages.slice(0, index));
+    try {
+      await truncate.mutateAsync({
+        conversationId: activeConversation.id,
+        messageId: message.id,
+      });
+      await createMessage.mutateAsync({
+        conversationId: activeConversation.id,
+        input: { role: "user", content: content.trim() },
+      });
+      await runCompletion(
+        activeConversation.id,
+        [...history, { role: "user", content: content.trim() }],
+        message.model ?? activeConversation.model,
+      );
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : "Failed");
     }
   }
 
@@ -108,6 +184,7 @@ export function ChatWorkspace() {
         conversations={conversations}
         activeId={conversationId}
         onNew={onNew}
+        onRename={onRename}
         onDelete={onDelete}
       />
 
@@ -126,6 +203,8 @@ export function ChatWorkspace() {
                 onSubmit={onSend}
                 streaming={streaming}
                 onStop={cancel}
+                stream={stream}
+                onStreamChange={setStream}
                 autoFocus
               />
             </div>
@@ -137,6 +216,8 @@ export function ChatWorkspace() {
               streaming={streaming}
               liveText={liveText}
               liveMetrics={liveMetrics}
+              onRegenerate={onRegenerate}
+              onEdit={onEdit}
             />
             <div className="border-t border-border p-3 sm:p-4">
               <div className="mx-auto max-w-3xl">
@@ -149,6 +230,8 @@ export function ChatWorkspace() {
                   onSubmit={onSend}
                   streaming={streaming}
                   onStop={cancel}
+                  stream={stream}
+                  onStreamChange={setStream}
                 />
               </div>
             </div>

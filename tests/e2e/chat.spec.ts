@@ -28,6 +28,7 @@ const sse = [
   'data: {"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"content":"Pong"}}]}',
   'data: {"choices":[{"index":0,"delta":{"content":" — "}}]}',
   'data: {"choices":[{"index":0,"delta":{"content":"ready when you are."}}]}',
+  'data: {"choices":[{"index":0,"delta":{"content":"\\n\\n```js\\nconst x = 1;\\n```"}}]}',
   'data: {"choices":[{"index":0,"delta":{}}],"usage":{"prompt_tokens":12,"completion_tokens":7}}',
   "data: [DONE]",
   "",
@@ -107,4 +108,29 @@ test("chat: send a message, stream a reply, and persist the conversation", async
   await expect(page.getByText("ready when you are.")).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test("chat: renders markdown, regenerates, and renames", async ({ page }) => {
+  await mockGateway(page);
+  await page.goto("/gateway/chat");
+  await signIn(page);
+
+  const composer = page.getByPlaceholder("Message Foonix…");
+  await expect(composer).toBeVisible({ timeout: 15_000 });
+  await composer.fill("Show me code");
+  await composer.press("Enter");
+
+  // Markdown code block renders (lazy-loaded renderer).
+  await expect(page.locator(".markdown pre")).toBeVisible({ timeout: 15_000 });
+
+  // Regenerate re-runs the completion.
+  await page.getByRole("button", { name: "Regenerate" }).click();
+  await expect(page.locator(".markdown pre")).toBeVisible({ timeout: 15_000 });
+
+  // Rename via the sidebar (double-click the title).
+  await page.getByRole("link", { name: "Show me code" }).dblclick();
+  const titleInput = page.locator("aside input");
+  await titleInput.fill("Renamed chat");
+  await titleInput.press("Enter");
+  await expect(page.getByRole("link", { name: "Renamed chat" })).toBeVisible();
 });

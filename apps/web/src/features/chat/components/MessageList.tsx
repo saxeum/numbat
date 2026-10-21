@@ -8,6 +8,8 @@ interface Props {
   streaming: boolean;
   liveText: string;
   liveMetrics: { ttftMs: number | null; tokens: number };
+  onRegenerate: (message: Message) => void;
+  onEdit: (message: Message, content: string) => void;
 }
 
 export function MessageList({
@@ -15,6 +17,8 @@ export function MessageList({
   streaming,
   liveText,
   liveMetrics,
+  onRegenerate,
+  onEdit,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
@@ -31,6 +35,10 @@ export function MessageList({
     const el = scrollRef.current;
     if (el && stickRef.current) el.scrollTop = el.scrollHeight;
   }, [messages, liveText, streaming]);
+
+  const lastAssistantId = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant")?.id;
 
   const liveMessage: Message = {
     id: "__live__",
@@ -51,9 +59,19 @@ export function MessageList({
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         {messages.map((message) => (
-          <MessageItem key={message.id} message={message} />
+          <MessageItem
+            key={message.id}
+            message={message}
+            canRegenerate={message.id === lastAssistantId && !streaming}
+            onRegenerate={() => onRegenerate(message)}
+            onEdit={
+              message.role === "user" && !streaming
+                ? (content) => onEdit(message, content)
+                : undefined
+            }
+          />
         ))}
-        {streaming ? <MessageItem message={liveMessage} /> : null}
+        {streaming ? <MessageItem message={liveMessage} streaming /> : null}
       </div>
     </div>
   );

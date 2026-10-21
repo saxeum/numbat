@@ -1,8 +1,23 @@
-import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { Check, Copy, Pencil, RefreshCw } from "lucide-react";
 
 import { BrandMark } from "@/components/brand";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { Message } from "@numbat/api";
+
+// Keep react-markdown + highlight.js out of the initial bundle.
+const MarkdownMessage = lazy(
+  () => import("@/features/chat/components/MarkdownMessage"),
+);
+
+interface Props {
+  message: Message;
+  streaming?: boolean;
+  canRegenerate?: boolean;
+  onRegenerate?: () => void;
+  onEdit?: (content: string) => void;
+}
 
 function usageSummary(message: Message): string | null {
   const parts: string[] = [];
@@ -38,15 +53,72 @@ function usageSummary(message: Message): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
-export function MessageItem({ message }: { message: Message }) {
+export function MessageItem({
+  message,
+  streaming,
+  canRegenerate,
+  onRegenerate,
+  onEdit,
+}: Props) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
 
   if (message.role === "user") {
+    if (editing) {
+      return (
+        <div className="flex flex-col items-end gap-2">
+          <Textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            rows={2}
+            autoFocus
+            className="max-w-[85%]"
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setEditing(false);
+                setDraft(message.content);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!draft.trim()}
+              onClick={() => {
+                setEditing(false);
+                onEdit?.(draft.trim());
+              }}
+            >
+              Send
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-end">
+      <div className="group flex flex-col items-end gap-1">
         <div className="max-w-[85%] rounded-2xl border border-border bg-secondary px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap">
           {message.content}
         </div>
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(message.content);
+              setEditing(true);
+            }}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100"
+          >
+            <Pencil className="size-3" />
+            Edit
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -63,9 +135,26 @@ export function MessageItem({ message }: { message: Message }) {
     <div className="flex gap-3">
       <BrandMark className="mt-0.5 size-6 rounded-md text-xs" />
       <div className="min-w-0 flex-1">
-        <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
-          {message.content || (message.stopped ? "(stopped)" : "…")}
-        </div>
+        {!message.content ? (
+          <div className="text-[15px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+            {message.stopped ? "(stopped)" : "…"}
+          </div>
+        ) : streaming ? (
+          <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
+            {message.content}
+            <span className="caret" />
+          </div>
+        ) : (
+          <Suspense
+            fallback={
+              <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                {message.content}
+              </div>
+            }
+          >
+            <MarkdownMessage content={message.content} />
+          </Suspense>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {message.model ? (
             <span>
@@ -87,6 +176,16 @@ export function MessageItem({ message }: { message: Message }) {
                 <Copy className="size-3" />
               )}
               {copied ? "Copied" : "Copy"}
+            </button>
+          ) : null}
+          {canRegenerate && onRegenerate ? (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+            >
+              <RefreshCw className="size-3" />
+              Regenerate
             </button>
           ) : null}
         </div>

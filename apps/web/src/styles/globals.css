@@ -151,3 +151,110 @@
     @apply font-mono;
   }
 }
+
+/* Markdown prose for assistant messages. */
+@layer components {
+  .markdown {
+    @apply text-[15px] leading-relaxed;
+  }
+  .markdown > * + * {
+    @apply mt-3;
+  }
+  .markdown h1 {
+    @apply mt-5 text-xl font-semibold tracking-tight;
+  }
+  .markdown h2 {
+    @apply mt-5 text-lg font-semibold tracking-tight;
+  }
+  .markdown h3,
+  .markdown h4 {
+    @apply mt-4 text-base font-semibold;
+  }
+  .markdown ul {
+    @apply list-disc pl-5;
+  }
+  .markdown ol {
+    @apply list-decimal pl-5;
+  }
+  .markdown li {
+    @apply mt-1;
+  }
+  .markdown blockquote {
+    @apply border-l-2 border-border pl-3 text-muted-foreground;
+  }
+  .markdown table {
+    @apply w-full border-collapse text-sm;
+  }
+  .markdown th,
+  .markdown td {
+    @apply border border-border px-2 py-1 text-left;
+  }
+  .markdown hr {
+    @apply my-4 border-border;
+  }
+  .markdown strong {
+    @apply font-semibold;
+  }
+}
+
+/* Syntax highlighting (rehype-highlight / highlight.js tokens). */
+.hljs-comment,
+.hljs-quote {
+  color: #5c6a7c;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name {
+  color: #c084fc;
+}
+.hljs-string,
+.hljs-attr,
+.hljs-addition,
+.hljs-regexp {
+  color: #86efac;
+}
+.hljs-number,
+.hljs-literal,
+.hljs-symbol {
+  color: #fca5a5;
+}
+.hljs-title,
+.hljs-section,
+.hljs-function .hljs-title {
+  color: #38bdf8;
+}
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-variable,
+.hljs-template-variable {
+  color: #5eead4;
+}
+.hljs-meta,
+.hljs-punctuation {
+  color: #8b98a9;
+}
+.hljs-deletion {
+  color: #f87171;
+}
+
+/* Streaming caret. */
+.caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--primary);
+  animation: caret-blink 1s steps(1) infinite;
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+}
