@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { Menu } from "lucide-react";
 
@@ -12,6 +12,22 @@ const collapsedByDefault =
   typeof localStorage !== "undefined" &&
   localStorage.getItem(STORAGE_KEY) === "1";
 
+/** True at ≥1280px, where the sidebar can be expanded. */
+function useIsWide() {
+  const [wide, setWide] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 1280px)").matches,
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1280px)");
+    const onChange = () => setWide(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+  return wide;
+}
+
 /**
  * Claude-style app shell: a collapsible navigation panel on the left and the
  * routed content on the right. On mobile the panel becomes a drawer.
@@ -19,6 +35,9 @@ const collapsedByDefault =
 export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(collapsedByDefault);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const wide = useIsWide();
+  // Auto-collapse to the icon rail when the window is too narrow to fit both.
+  const effectiveCollapsed = collapsed || !wide;
 
   function toggleCollapse() {
     setCollapsed((current) => {
@@ -35,7 +54,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-svh overflow-hidden bg-background text-foreground">
       <div className="hidden lg:flex">
-        <AppSidebar collapsed={collapsed} onToggleCollapse={toggleCollapse} />
+        <AppSidebar
+          collapsed={effectiveCollapsed}
+          onToggleCollapse={toggleCollapse}
+          toggleable={wide}
+        />
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

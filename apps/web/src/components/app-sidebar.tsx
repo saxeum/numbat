@@ -181,9 +181,16 @@ interface Props {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onNavigate?: () => void;
+  /** Hide the collapse/expand control when the width is forced. */
+  toggleable?: boolean;
 }
 
-export function AppSidebar({ collapsed, onToggleCollapse, onNavigate }: Props) {
+export function AppSidebar({
+  collapsed,
+  onToggleCollapse,
+  onNavigate,
+  toggleable = true,
+}: Props) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { data: session } = useSession();
@@ -225,7 +232,7 @@ export function AppSidebar({ collapsed, onToggleCollapse, onNavigate }: Props) {
         ) : (
           <Brand />
         )}
-        {!collapsed ? (
+        {!collapsed && toggleable ? (
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -237,7 +244,7 @@ export function AppSidebar({ collapsed, onToggleCollapse, onNavigate }: Props) {
         ) : null}
       </div>
 
-      {collapsed ? (
+      {collapsed && toggleable ? (
         <button
           type="button"
           onClick={onToggleCollapse}
