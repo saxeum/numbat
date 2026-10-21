@@ -36,6 +36,13 @@
       "when": 1792549788988,
       "tag": "0004_seed_free_models_nvidia",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792552464237,
+      "tag": "0005_reseed_free_models",
+      "breakpoints": true
     }
   ]
 }

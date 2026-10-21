@@ -258,7 +258,8 @@
                     "enum": [
                       "gemini",
                       "groq",
-                      "nvidia"
+                      "nvidia",
+                      "openrouter"
                     ]
                   }
                 }
@@ -586,7 +587,8 @@
             "enum": [
               "gemini",
               "groq",
-              "nvidia"
+              "nvidia",
+              "openrouter"
             ]
           },
           "label": {
@@ -616,7 +618,8 @@
             "enum": [
               "gemini",
               "groq",
-              "nvidia"
+              "nvidia",
+              "openrouter"
             ]
           },
           "label": {
@@ -656,7 +659,8 @@
             "enum": [
               "gemini",
               "groq",
-              "nvidia"
+              "nvidia",
+              "openrouter"
             ]
           },
           "x-context": {

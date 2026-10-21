@@ -130,7 +130,7 @@ describe("chat completions (authenticated)", () => {
           id: "chatcmpl-nv",
           object: "chat.completion",
           created: 1,
-          model: "meta/llama-3.3-70b-instruct",
+          model: "nvidia/llama-3.1-nemotron-70b-instruct",
           choices: [
             {
               index: 0,
@@ -146,7 +146,7 @@ describe("chat completions (authenticated)", () => {
       method: "POST",
       headers: { ...json, cookie },
       body: JSON.stringify({
-        model: "meta/llama-3.3-70b-instruct",
+        model: "nvidia/llama-3.1-nemotron-70b-instruct",
         messages: [{ role: "user", content: "ping" }],
       }),
     });

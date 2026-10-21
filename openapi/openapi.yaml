@@ -167,7 +167,7 @@ paths:
                   type: boolean
                 provider:
                   type: string
-                  enum: [gemini, groq, nvidia]
+                  enum: [gemini, groq, nvidia, openrouter]
             examples:
               groq:
                 summary: Groq completion (requires a Groq credential)
@@ -363,7 +363,7 @@ components:
           type: string
         provider:
           type: string
-          enum: [gemini, groq, nvidia]
+          enum: [gemini, groq, nvidia, openrouter]
         label:
           type: string
         fingerprint:
@@ -379,7 +379,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [gemini, groq, nvidia]
+          enum: [gemini, groq, nvidia, openrouter]
         label:
           type: string
           maxLength: 64
@@ -399,7 +399,7 @@ components:
           type: string
         x-provider:
           type: string
-          enum: [gemini, groq, nvidia]
+          enum: [gemini, groq, nvidia, openrouter]
         x-context:
           type: integer
         x-free:

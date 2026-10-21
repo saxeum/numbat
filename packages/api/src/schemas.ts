@@ -27,7 +27,7 @@ export type ErrorResponse = z.infer<typeof ErrorResponse>;
 export const Credential = z
   .object({
     id: z.string(),
-    provider: z.enum(["gemini", "groq", "nvidia"]),
+    provider: z.enum(["gemini", "groq", "nvidia", "openrouter"]),
     label: z.string(),
     fingerprint: z.string(),
     createdAt: z.string(),
@@ -37,7 +37,7 @@ export const Credential = z
 export type Credential = z.infer<typeof Credential>;
 
 export const CreateCredentialRequest = z.object({
-  provider: z.enum(["gemini", "groq", "nvidia"]),
+  provider: z.enum(["gemini", "groq", "nvidia", "openrouter"]),
   label: z.string().max(64).optional(),
   apiKey: z.string().min(1),
 });
@@ -48,7 +48,7 @@ export const Model = z
     id: z.string(),
     object: z.literal("model"),
     owned_by: z.string(),
-    "x-provider": z.enum(["gemini", "groq", "nvidia"]),
+    "x-provider": z.enum(["gemini", "groq", "nvidia", "openrouter"]),
     "x-context": z.number().int().optional(),
     "x-free": z.boolean(),
   })

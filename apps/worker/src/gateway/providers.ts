@@ -1,8 +1,8 @@
-// Provider catalog. Google Gemini, Groq, and NVIDIA are supported; all three
-// offer a free developer tier. Knows how to verify a key and how to talk to each
+// Provider catalog. Google Gemini, Groq, NVIDIA, and OpenRouter are supported;
+// all offer a free tier. Knows how to verify a key and how to talk to each
 // provider's chat API.
 
-export type ProviderId = "gemini" | "groq" | "nvidia";
+export type ProviderId = "gemini" | "groq" | "nvidia" | "openrouter";
 export type ProviderDialect = "openai" | "gemini";
 
 export interface ProviderSpec {
@@ -44,6 +44,16 @@ const PROVIDERS: Record<ProviderId, ProviderSpec> = {
     chatUrl: "https://integrate.api.nvidia.com/v1/chat/completions",
     auth: (apiKey) => ({ authorization: `Bearer ${apiKey}` }),
   },
+  openrouter: {
+    id: "openrouter",
+    label: "OpenRouter",
+    dialect: "openai",
+    // /models is public, so verify against the authenticated key endpoint
+    // (keys start with `sk-or-`).
+    verifyUrl: "https://openrouter.ai/api/v1/key",
+    chatUrl: "https://openrouter.ai/api/v1/chat/completions",
+    auth: (apiKey) => ({ authorization: `Bearer ${apiKey}` }),
+  },
 };
 
 export const PROVIDER_IDS = Object.keys(PROVIDERS) as ProviderId[];
@@ -53,7 +63,12 @@ export function getProvider(id: ProviderId): ProviderSpec {
 }
 
 export function isProviderId(value: string): value is ProviderId {
-  return value === "gemini" || value === "groq" || value === "nvidia";
+  return (
+    value === "gemini" ||
+    value === "groq" ||
+    value === "nvidia" ||
+    value === "openrouter"
+  );
 }
 
 export type VerifyResult =
