@@ -111,14 +111,10 @@ export function GatewayChatPage() {
   }
 
   const streaming = chat.isPending && stream && liveMetrics.tokens > 0;
-  const liveTps =
-    streaming && liveMetrics.ttftMs !== null
-      ? liveMetrics.tokens /
-        Math.max(
-          (performance.now() - startedAt.current - liveMetrics.ttftMs) / 1000,
-          0.001,
-        )
-      : null;
+  const liveTps = streaming
+    ? liveMetrics.tokens /
+      Math.max((performance.now() - startedAt.current) / 1000, 0.001)
+    : null;
 
   const metrics = chat.data
     ? [

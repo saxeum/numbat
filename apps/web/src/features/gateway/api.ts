@@ -174,7 +174,8 @@ async function readStream(
   let content = "";
   let model = fallbackModel;
   let ttftMs: number | null = null;
-  let deltas = 0;
+  let lastTokenMs = 0;
+  let tokenEvents = 0;
   let usageTokens: number | null = null;
 
   for (;;) {
@@ -193,18 +194,27 @@ async function readStream(
         const chunk = JSON.parse(payload) as {
           model?: string;
           usage?: { completion_tokens?: number };
-          choices?: { delta?: { content?: string } }[];
+          choices?: { delta?: { content?: string; reasoning?: string } }[];
         };
         if (chunk.model) model = chunk.model;
         if (typeof chunk.usage?.completion_tokens === "number") {
           usageTokens = chunk.usage.completion_tokens;
         }
-        const delta = chunk.choices?.[0]?.delta?.content;
-        if (typeof delta === "string" && delta) {
-          if (ttftMs === null) ttftMs = performance.now() - started;
-          deltas += 1;
-          content += delta;
-          onToken?.(delta);
+        const delta = chunk.choices?.[0]?.delta;
+        const contentDelta =
+          typeof delta?.content === "string" ? delta.content : "";
+        // Reasoning tokens still take time; count them for TTFT/TPS.
+        const reasoningDelta =
+          typeof delta?.reasoning === "string" ? delta.reasoning : "";
+        if (contentDelta || reasoningDelta) {
+          const now = performance.now() - started;
+          if (ttftMs === null) ttftMs = now;
+          lastTokenMs = now;
+          tokenEvents += 1;
+          if (contentDelta) {
+            content += contentDelta;
+            onToken?.(contentDelta);
+          }
         }
       } catch {
         // ignore malformed SSE line
@@ -213,8 +223,11 @@ async function readStream(
   }
 
   const totalMs = performance.now() - started;
-  const tokens = usageTokens ?? (deltas > 0 ? deltas : null);
-  const generationMs = totalMs - (ttftMs ?? 0);
+  const tokens = usageTokens ?? (tokenEvents > 0 ? tokenEvents : null);
+  const generationMs = ttftMs !== null ? lastTokenMs - ttftMs : 0;
+  // Guard against buffered/bursty delivery: assume >= ~1ms per token, else use
+  // the whole-request window.
+  const denomMs = tokens && generationMs >= tokens ? generationMs : totalMs;
   return {
     content,
     provider,
@@ -222,6 +235,6 @@ async function readStream(
     ttftMs,
     totalMs,
     tokens,
-    tps: rate(tokens, generationMs),
+    tps: rate(tokens, denomMs),
   };
 }
