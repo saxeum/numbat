@@ -15,6 +15,8 @@ interface Props {
   onNew: () => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
+  /** Called after a conversation is selected (closes the mobile drawer). */
+  onNavigate?: () => void;
 }
 
 export function ConversationSidebar({
@@ -23,6 +25,7 @@ export function ConversationSidebar({
   onNew,
   onRename,
   onDelete,
+  onNavigate,
 }: Props) {
   const groups = useMemo(
     () => groupConversations(conversations, NOW),
@@ -43,7 +46,7 @@ export function ConversationSidebar({
         New chat
       </button>
 
-      <nav className="flex max-h-56 flex-col gap-4 overflow-y-auto lg:max-h-[calc(100svh-20rem)]">
+      <nav className="flex flex-col gap-4 overflow-y-auto lg:max-h-[calc(100svh-20rem)]">
         {conversations.length === 0 ? (
           <p className="px-2 py-1 text-sm text-muted-foreground">
             No conversations yet.
@@ -130,6 +133,7 @@ export function ConversationSidebar({
                 >
                   <Link
                     to={`/gateway/chat/${conversation.id}`}
+                    onClick={onNavigate}
                     onDoubleClick={() => {
                       setDraft(conversation.title);
                       setEditingId(conversation.id);

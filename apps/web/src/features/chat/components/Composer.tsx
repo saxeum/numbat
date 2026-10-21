@@ -89,6 +89,7 @@ export function Composer({
   function submit() {
     if (streaming || !value.trim() || !effectiveModel) return;
     onSubmit({ model: effectiveModel });
+    textareaRef.current?.focus();
   }
 
   function onFormSubmit(event: FormEvent) {
@@ -146,7 +147,7 @@ export function Composer({
           <details className="relative">
             <summary
               className={cn(
-                "flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden",
+                "flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden",
               )}
             >
               <span className="max-w-40 truncate">{providerSummary}</span>
@@ -208,7 +209,7 @@ export function Composer({
           </select>
 
           <details className="relative ml-auto">
-            <summary className="flex cursor-pointer list-none items-center rounded-full border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center rounded-full border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
               <SlidersHorizontal className="size-4" />
             </summary>
             <div className="absolute right-0 bottom-full z-10 mb-2 w-48 rounded-lg border border-border bg-card p-3 shadow-lg">
@@ -232,7 +233,7 @@ export function Composer({
             <Button
               type="button"
               variant="outline"
-              size="icon"
+              size="icon-lg"
               className="rounded-full"
               onClick={onStop}
               aria-label="Stop"
@@ -242,7 +243,7 @@ export function Composer({
           ) : (
             <Button
               type="submit"
-              size="icon"
+              size="icon-lg"
               className="rounded-full"
               disabled={!value.trim() || !effectiveModel}
               aria-label="Send"
