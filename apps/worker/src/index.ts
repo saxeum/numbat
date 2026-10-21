@@ -2,6 +2,7 @@ import { swaggerUI } from "@hono/swagger-ui";
 import { Hono } from "hono";
 
 import openapi from "../openapi.json";
+import { requireSessionPage } from "./api/middleware/auth";
 import { errorHandler, notFoundHandler } from "./api/middleware/error";
 import { logger } from "./api/middleware/logger";
 import { rateLimit } from "./api/middleware/rate-limit";
@@ -41,6 +42,9 @@ export function createApp() {
   api.route("/chat", chat);
   api.route("/keys", keys);
   // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.
+  // Authenticated only: browser navigations are redirected to sign-in.
+  api.use("/openapi.json", requireSessionPage);
+  api.use("/docs", requireSessionPage);
   api.get("/openapi.json", (c) => c.json(openapi));
   api.get("/docs", swaggerUI({ url: "/api/openapi.json" }));
 

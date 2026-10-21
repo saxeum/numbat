@@ -116,7 +116,9 @@ packages/api/                     # generated (committed): types, zod, client, t
 - **Server:** plain Hono; validate with generated Zod via `@hono/zod-validator`;
   handlers typed from generated types.
 - **Docs:** serve bundled spec at `/api/openapi.json`; Swagger UI at `/api/docs`
-  via `@hono/swagger-ui`.
+  via `@hono/swagger-ui`. Both require an authenticated session —
+  unauthenticated browser navigations are redirected to `/gateway`, API callers
+  get a `401`.
 - **SPA:** consume generated client/hooks (aligns with KAN-15).
 
 ## 5. Proposed repo layout

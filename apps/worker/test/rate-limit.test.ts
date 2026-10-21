@@ -24,7 +24,7 @@ function envWithRateLimiter(success: boolean): Env {
 describe("rate limiting", () => {
   it("returns a 429 envelope when the limiter denies", async () => {
     const res = await createApp().request(
-      "https://foonix.net/api/openapi.json",
+      "https://foonix.net/api/health",
       undefined,
       envWithRateLimiter(false),
     );
@@ -36,12 +36,14 @@ describe("rate limiting", () => {
   });
 
   it("passes through when the limiter allows", async () => {
+    // `/api/models` is auth-gated, so a 401 (not 429) proves the limiter let
+    // the request reach the route.
     const res = await createApp().request(
-      "https://foonix.net/api/openapi.json",
+      "https://foonix.net/api/models",
       undefined,
       envWithRateLimiter(true),
     );
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
   });
 });

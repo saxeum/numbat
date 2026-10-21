@@ -12,3 +12,8 @@ test("models endpoint is not public", async ({ request }) => {
   const res = await request.get("/api/models");
   expect(res.status()).toBe(401);
 });
+
+test("swagger docs are not public", async ({ request }) => {
+  expect((await request.get("/api/docs")).status()).toBe(401);
+  expect((await request.get("/api/openapi.json")).status()).toBe(401);
+});

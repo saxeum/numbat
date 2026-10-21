@@ -25,6 +25,30 @@ export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
 });
 
 /**
+ * Requires a session for browser-facing pages (e.g. the Swagger UI). Browser
+ * navigations are redirected to the app's sign-in route; API callers get the
+ * standard 401 envelope.
+ */
+export const requireSessionPage = createMiddleware<AppEnv>(async (c, next) => {
+  const session = await createAuth(c.env).api.getSession({
+    headers: c.req.raw.headers,
+  });
+
+  if (!session) {
+    if ((c.req.header("accept") ?? "").includes("text/html")) {
+      return c.redirect("/gateway");
+    }
+    throw new AppError(401, "UNAUTHENTICATED", "Sign in required");
+  }
+
+  c.set("user", session.user);
+  c.set("session", session.session);
+  c.set("userId", session.user.id);
+
+  await next();
+});
+
+/**
  * Accepts a session cookie **or** a gateway API key (`Authorization: Bearer
  * nbk_…`) and sets `userId`. Used on the inference routes (models, chat).
  */
