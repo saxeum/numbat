@@ -219,7 +219,7 @@ describe("chat completions (authenticated)", () => {
       method: "POST",
       headers: { ...json, cookie },
       body: JSON.stringify({
-        model: "gemini-flash-lite-latest",
+        model: "gemini-3.1-flash-lite",
         messages: [{ role: "user", content: "ping" }],
       }),
     });
@@ -232,7 +232,7 @@ describe("chat completions (authenticated)", () => {
       choices: { message: { content: string }; finish_reason: string }[];
     };
     expect(body.object).toBe("chat.completion");
-    expect(body.model).toBe("gemini-flash-lite-latest");
+    expect(body.model).toBe("gemini-3.1-flash-lite");
     expect(body.choices[0]?.message.content).toBe("pong");
     expect(body.choices[0]?.finish_reason).toBe("stop");
   });

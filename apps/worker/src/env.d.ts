@@ -19,7 +19,10 @@ interface Env {
   CATALOG_OPENROUTER_API_KEY?: string;
   /** Shared token for POST /api/catalog/refresh. */
   CATALOG_ADMIN_TOKEN?: string;
-  /** "1" arms the cron; anything else makes it a no-op. */
+  /**
+   * "1" lets a bare `runCatalogSync` run. The nightly cron is gone, so this
+   * is only meaningful for the forced admin refresh route.
+   */
   CATALOG_ENABLED?: string;
   /** "1" discovers and logs without writing. */
   CATALOG_DRY_RUN?: string;

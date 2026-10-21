@@ -19,9 +19,6 @@
     "APP_VERSION": "0.0.0",
     "BETTER_AUTH_URL": "https://foonix.net",
     "BYOK_KEK_VERSION": "1",
-    // Free-model catalog sync (KAN-44). Prod-only: it needs CATALOG_*_API_KEY
-    // secrets and spends free-tier quota. Rollback = set to "0" and redeploy.
-    "CATALOG_ENABLED": "1",
     // Provider request/response tracing. Bodies are truncated (8 KB) and the
     // provider key is never logged. Turn off by setting to "0" and redeploy.
     "GATEWAY_LLM_LOGGING": "1",
@@ -35,9 +32,6 @@
     },
   ],
   "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
-  // Nightly free-model catalog refresh (KAN-44). Production only — staging and
-  // preview have no trigger, so provider quota is spent once per day.
-  "triggers": { "crons": ["17 3 * * *"] },
   "env": {
     "staging": {
       "name": "numbat-api-staging",
@@ -45,15 +39,10 @@
       // Cloudflare Access if it is needed. No stable or per-version URL.
       "workers_dev": false,
       "preview_urls": false,
-      // No cron triggers: the catalog sync is prod-only (KAN-44) so provider
-      // quota is spent once a day. Declared explicitly because environment
-      // config inherits top-level `triggers`.
-      "triggers": { "crons": [] },
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_VERSION": "0.0.0",
         "BYOK_KEK_VERSION": "1",
-        "CATALOG_ENABLED": "0",
         "GATEWAY_LLM_LOGGING": "0",
       },
       "ratelimits": [
@@ -79,12 +68,10 @@
       // and reach this Worker through the web Worker's service binding.
       "workers_dev": false,
       "preview_urls": true,
-      "triggers": { "crons": [] },
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_VERSION": "0.0.0",
         "BYOK_KEK_VERSION": "1",
-        "CATALOG_ENABLED": "0",
         "GATEWAY_LLM_LOGGING": "0",
       },
       "ratelimits": [
