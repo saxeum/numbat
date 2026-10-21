@@ -10,13 +10,26 @@ interface Env {
 }
 
 export default {
-  fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
 
     if (pathname === "/api" || pathname.startsWith("/api/")) {
       return env.API.fetch(request);
     }
 
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+
+    // Never cache the HTML shell: a stale copy pins an old set of hashed
+    // chunks and breaks lazy imports after a deploy.
+    if ((response.headers.get("content-type") ?? "").includes("text/html")) {
+      const headers = new Headers(response.headers);
+      headers.set("cache-control", "no-cache");
+      return new Response(response.body, {
+        status: response.status,
+        headers,
+      });
+    }
+
+    return response;
   },
 };

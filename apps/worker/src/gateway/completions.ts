@@ -200,6 +200,8 @@ export interface AccumulatedCompletion {
   content: string;
   model: string;
   usage: TokenUsage | null;
+  /** Time to first content token (ms); null for non-streamed replies. */
+  ttftMs: number | null;
 }
 
 function parseUsage(raw: unknown): TokenUsage | null {
@@ -224,12 +226,13 @@ function parseUsage(raw: unknown): TokenUsage | null {
 }
 
 /** Accumulates an OpenAI-shaped SSE stream (used to persist the turn). */
-export function createSseAccumulator() {
+export function createSseAccumulator(startedAt: number) {
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
   let model = "";
   let usage: TokenUsage | null = null;
+  let ttftMs: number | null = null;
 
   return {
     push(chunk: Uint8Array) {
@@ -250,14 +253,17 @@ export function createSseAccumulator() {
           if (typeof json.model === "string") model = json.model;
           if (json.usage) usage = parseUsage(json.usage);
           const delta = json.choices?.[0]?.delta?.content;
-          if (typeof delta === "string") content += delta;
+          if (typeof delta === "string" && delta.length > 0) {
+            if (ttftMs === null) ttftMs = Date.now() - startedAt;
+            content += delta;
+          }
         } catch {
           // ignore malformed SSE line
         }
       }
     },
     result(): AccumulatedCompletion {
-      return { content, model, usage };
+      return { content, model, usage, ttftMs };
     },
   };
 }
@@ -273,6 +279,7 @@ export function extractCompletion(json: unknown): AccumulatedCompletion {
     content: body.choices?.[0]?.message?.content ?? "",
     model: typeof body.model === "string" ? body.model : "",
     usage: parseUsage(body.usage),
+    ttftMs: null,
   };
 }
 

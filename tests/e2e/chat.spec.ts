@@ -256,6 +256,7 @@ test("chat: send a message, stream a reply, and persist the conversation", async
     timeout: 15_000,
   });
   await expect(page.getByText(/groq · openai\/gpt-oss-120b/)).toBeVisible();
+  await expect(page.getByText(/TTFT \d+ ms · TPS \d/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Say pong" })).toBeVisible();
 
   await page.waitForTimeout(600);

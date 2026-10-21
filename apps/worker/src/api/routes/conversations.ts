@@ -191,6 +191,7 @@ conversations.post(
       })),
     );
 
+    const startedAt = Date.now();
     const prepared = await prepareCompletion(c.env, db, ownerId, {
       model,
       messages: trimmed.messages,
@@ -208,6 +209,8 @@ conversations.post(
       content: string;
       model: string;
       usage: TokenUsage | null;
+      ttftMs: number | null;
+      totalMs: number;
     }) => {
       const now = new Date().toISOString();
       await createMessage(db, {
@@ -221,8 +224,8 @@ conversations.post(
         promptTokens: result.usage?.prompt ?? null,
         completionTokens: result.usage?.completion ?? null,
         reasoningTokens: result.usage?.reasoning ?? null,
-        ttftMs: null,
-        totalMs: null,
+        ttftMs: result.ttftMs,
+        totalMs: result.totalMs,
         stopped: false,
         createdAt: now,
       });
@@ -233,7 +236,7 @@ conversations.post(
       if (!response.body) {
         throw new AppError(502, "UPSTREAM_ERROR", "Empty upstream stream");
       }
-      const accumulator = createSseAccumulator();
+      const accumulator = createSseAccumulator(startedAt);
       // Persist on flush: the stream only closes after the turn is stored.
       const tapped = new TransformStream<Uint8Array, Uint8Array>({
         transform(chunk, controller) {
@@ -241,7 +244,10 @@ conversations.post(
           controller.enqueue(chunk);
         },
         async flush() {
-          await persistAssistant(accumulator.result());
+          await persistAssistant({
+            ...accumulator.result(),
+            totalMs: Date.now() - startedAt,
+          });
         },
       });
       return new Response(response.body.pipeThrough(tapped), {
@@ -251,7 +257,10 @@ conversations.post(
     }
 
     const json = await response.json();
-    await persistAssistant(extractCompletion(json));
+    await persistAssistant({
+      ...extractCompletion(json),
+      totalMs: Date.now() - startedAt,
+    });
     return new Response(JSON.stringify(json), {
       status: response.status,
       headers,

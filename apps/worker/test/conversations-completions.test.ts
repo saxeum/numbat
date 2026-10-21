@@ -79,6 +79,8 @@ interface Detail {
     provider: string | null;
     completionTokens: number | null;
     promptTokens: number | null;
+    ttftMs: number | null;
+    totalMs: number | null;
   }[];
 }
 
@@ -169,6 +171,9 @@ describe("conversation completions (server-orchestrated)", () => {
     ]);
     expect(conversation.messages[1]?.content).toBe("Pong!");
     expect(conversation.messages[1]?.completionTokens).toBe(2);
+    // TTFT / total duration are captured server-side so the UI can show them.
+    expect(conversation.messages[1]?.ttftMs).not.toBeNull();
+    expect(conversation.messages[1]?.totalMs).not.toBeNull();
   });
 
   it("regenerates without appending a new user turn", async () => {
