@@ -197,6 +197,7 @@ conversations.post(
       messages: trimmed.messages,
       stream,
       providerHint: body.provider,
+      requestId: c.get("requestId"),
     });
 
     const response = await clientCompletionResponse(prepared);

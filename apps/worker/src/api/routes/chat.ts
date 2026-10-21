@@ -56,6 +56,7 @@ chat.post("/completions", async (c) => {
       messages: body.messages as CompletionMessage[],
       stream: body.stream === true,
       providerHint: typeof providerHint === "string" ? providerHint : undefined,
+      requestId: c.get("requestId"),
     },
   );
 

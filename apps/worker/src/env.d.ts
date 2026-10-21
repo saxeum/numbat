@@ -33,4 +33,8 @@ interface Env {
   CATALOG_REPROBE_DAYS?: string;
   /** Per-request upstream timeout in ms (default 12000). */
   CATALOG_TIMEOUT_MS?: string;
+
+  // --- Provider request/response tracing ---------------------------------
+  /** "1" logs provider request/response traces (bodies truncated, key never). */
+  GATEWAY_LLM_LOGGING?: string;
 }

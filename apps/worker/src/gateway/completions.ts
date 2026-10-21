@@ -15,6 +15,13 @@ import {
   type ProviderId,
   type ProviderSpec,
 } from "./providers";
+import {
+  llmLoggingEnabled,
+  logProviderRequest,
+  logProviderResponse,
+  tapForTrace,
+  type ProviderTraceContext,
+} from "./trace";
 
 export const UPSTREAM_TIMEOUT_MS = 60_000;
 
@@ -38,6 +45,12 @@ export interface PreparedCompletion {
   model: string;
   stream: boolean;
   upstream: Response;
+  /** Correlates provider traces with the request log. */
+  requestId?: string;
+  /** Whether `GATEWAY_LLM_LOGGING` was on for this request. */
+  logging: boolean;
+  /** When the upstream call started (for trace durations). */
+  startedAt: number;
 }
 
 export interface PrepareInput {
@@ -45,6 +58,11 @@ export interface PrepareInput {
   messages: CompletionMessage[];
   stream: boolean;
   providerHint?: string;
+  requestId?: string;
+}
+
+function upstreamRequestId(upstream: Response): string | null {
+  return upstream.headers.get("x-request-id") ?? upstream.headers.get("cf-ray");
 }
 
 /**
@@ -131,6 +149,16 @@ export async function prepareCompletion(
     };
   }
 
+  const trace: ProviderTraceContext = {
+    requestId: input.requestId,
+    provider,
+    model,
+    stream,
+  };
+  const logging = llmLoggingEnabled(env);
+  logProviderRequest(logging, trace, { url, payload });
+  const startedAt = Date.now();
+
   let upstream: Response;
   try {
     upstream = await fetch(url, {
@@ -139,11 +167,23 @@ export async function prepareCompletion(
       body: JSON.stringify(payload),
       signal: stream ? undefined : AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
-  } catch {
+  } catch (error) {
+    logProviderResponse(logging, trace, {
+      status: 502,
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : "request failed",
+    });
     throw new AppError(502, "UPSTREAM_ERROR", `The ${provider} request failed`);
   }
 
   if (!upstream.ok) {
+    logProviderResponse(logging, trace, {
+      status: upstream.status,
+      contentType: upstream.headers.get("content-type"),
+      upstreamRequestId: upstreamRequestId(upstream),
+      durationMs: Date.now() - startedAt,
+      error: `${spec.label} returned ${upstream.status}`,
+    });
     throw new AppError(
       502,
       "UPSTREAM_ERROR",
@@ -151,34 +191,73 @@ export async function prepareCompletion(
     );
   }
 
-  return { provider, spec, model, stream, upstream };
+  return {
+    provider,
+    spec,
+    model,
+    stream,
+    upstream,
+    requestId: input.requestId,
+    logging,
+    startedAt,
+  };
 }
 
 /** Shapes the upstream response into the OpenAI-compatible client response. */
 export async function clientCompletionResponse(
   prepared: PreparedCompletion,
 ): Promise<Response> {
-  const { provider, spec, model, stream, upstream } = prepared;
+  const {
+    provider,
+    spec,
+    model,
+    stream,
+    upstream,
+    requestId,
+    logging,
+    startedAt,
+  } = prepared;
   const meta = {
     "x-byokfree-provider": provider,
     "x-byokfree-model": model,
   };
+  const trace: ProviderTraceContext = { requestId, provider, model, stream };
 
   if (spec.dialect === "gemini") {
     if (stream) {
       if (!upstream.body) {
         throw new AppError(502, "UPSTREAM_ERROR", "Empty upstream stream");
       }
-      return new Response(geminiStreamToOpenAI(upstream.body, model), {
-        status: 200,
-        headers: {
-          ...meta,
-          "content-type": "text/event-stream; charset=utf-8",
-          "cache-control": "no-cache",
+      const contentType = "text/event-stream; charset=utf-8";
+      return new Response(
+        tapForTrace(
+          logging,
+          trace,
+          geminiStreamToOpenAI(upstream.body, model),
+          {
+            status: 200,
+            contentType,
+            upstreamRequestId: upstreamRequestId(upstream),
+          },
+        ),
+        {
+          status: 200,
+          headers: {
+            ...meta,
+            "content-type": contentType,
+            "cache-control": "no-cache",
+          },
         },
-      });
+      );
     }
     const json = (await upstream.json()) as Record<string, unknown>;
+    logProviderResponse(logging, trace, {
+      status: 200,
+      contentType: "application/json",
+      upstreamRequestId: upstreamRequestId(upstream),
+      durationMs: Date.now() - startedAt,
+      body: JSON.stringify(json),
+    });
     return new Response(JSON.stringify(fromGeminiResponse(json, model)), {
       status: 200,
       headers: { ...meta, "content-type": "application/json" },
@@ -190,6 +269,27 @@ export async function clientCompletionResponse(
   const contentType = upstream.headers.get("content-type");
   if (contentType) outHeaders.set("content-type", contentType);
   if (stream) outHeaders.set("cache-control", "no-cache");
+
+  if (stream && upstream.body) {
+    return new Response(
+      tapForTrace(logging, trace, upstream.body, {
+        status: upstream.status,
+        contentType,
+        upstreamRequestId: upstreamRequestId(upstream),
+      }),
+      { status: upstream.status, headers: outHeaders },
+    );
+  }
+
+  // Non-streamed OpenAI body: clone so the client stream is left untouched.
+  const logBody = logging ? await upstream.clone().text() : undefined;
+  logProviderResponse(logging, trace, {
+    status: upstream.status,
+    contentType,
+    upstreamRequestId: upstreamRequestId(upstream),
+    durationMs: Date.now() - startedAt,
+    body: logBody,
+  });
   return new Response(upstream.body, {
     status: upstream.status,
     headers: outHeaders,

@@ -22,6 +22,9 @@
     // Free-model catalog sync (KAN-44). Prod-only: it needs CATALOG_*_API_KEY
     // secrets and spends free-tier quota. Rollback = set to "0" and redeploy.
     "CATALOG_ENABLED": "1",
+    // Provider request/response tracing. Bodies are truncated (8 KB) and the
+    // provider key is never logged. Turn off by setting to "0" and redeploy.
+    "GATEWAY_LLM_LOGGING": "1",
   },
   "d1_databases": [
     {
@@ -51,6 +54,7 @@
         "APP_VERSION": "0.0.0",
         "BYOK_KEK_VERSION": "1",
         "CATALOG_ENABLED": "0",
+        "GATEWAY_LLM_LOGGING": "0",
       },
       "ratelimits": [
         {
@@ -81,6 +85,7 @@
         "APP_VERSION": "0.0.0",
         "BYOK_KEK_VERSION": "1",
         "CATALOG_ENABLED": "0",
+        "GATEWAY_LLM_LOGGING": "0",
       },
       "ratelimits": [
         {
