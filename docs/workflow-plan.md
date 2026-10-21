@@ -106,12 +106,19 @@ preview D1).
 **Implemented:** per-version **Version URLs** (formerly "preview URLs") via the
 `preview` CI job:
 
-- `workers_dev: true` and `preview_urls: true` in both `wrangler.jsonc` files.
+- `workers_dev: false` (no stable `*.workers.dev` hostname) and `preview_urls:
+  true` (per-version PR URLs only) in both `wrangler.jsonc` files.
 - On PR, after `verify`, CI runs `wrangler versions upload --preview-alias
   pr-<number>` for both Workers and posts/updates a single comment with the alias
   URLs (`https://pr-<n>-numbat-web.<account-subdomain>.workers.dev`, `...-numbat-api...`).
 - Fork PRs are skipped (no secrets). PR previews are isolated per version; no new
   DNS.
+
+> **Access:** `emailAndPassword` is enabled only when `ENVIRONMENT=development`,
+> so staging/preview cannot be used for self-service sign-up. The stable
+> `numbat-api-staging` and `numbat-*-preview` `*.workers.dev` hosts are disabled;
+> PR previews use the per-version URLs above. Put staging behind Cloudflare
+> Access if it needs a reachable hostname.
 
 > **Gotcha:** the `previews_enabled` / Version URL setting is only (re)applied by
 > a **deploy** with `preview_urls: true`, not by `wrangler versions upload` or the

@@ -16,8 +16,9 @@
 Shipped in PR #20. Better Auth on the Worker (`/api/auth/*`), Google provider,
 auth tables, owner-scoped queries + 401 envelope, SPA sign-in/out with a
 protected route. Dev-only
-email/password enabled outside production for tests. Google sign-in verified in
-production; secrets set for prod/staging/preview.
+email/password enabled in development only (never staging, preview, or prod) for
+tests. Google sign-in verified in production; secrets set for
+prod/staging/preview.
 
 ---
 

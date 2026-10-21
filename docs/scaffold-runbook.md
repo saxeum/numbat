@@ -354,13 +354,13 @@ npm run deploy:web     # builds SPA, registers foonix.net (custom domain)
 
 > **`workers.dev` and preview URLs.** Declaring a `routes` entry disables the
 > Worker's `*.workers.dev` hostname by default, so the only ingress is the zone
-> route (untestable until the web Worker creates apex DNS). Set
-> `"workers_dev": true` to keep a testable hostname; for this account the test
-> URL is `https://numbat-api.<account-subdomain>.workers.dev` (account subdomain
-> `<account-subdomain>`). Per-version **Version URLs** (formerly "preview URLs") are now
-> enabled (`"preview_urls": true`) and wired into PR CI — see
-> [`workflow-plan.md`](workflow-plan.md) W3. Note the setting is only applied by a
-> **deploy**, not by `versions upload`.
+> route (untestable until the web Worker creates apex DNS). Production, staging,
+> and preview now set `"workers_dev": false`; only per-version **Version URLs**
+> (formerly "preview URLs", `"preview_urls": true`) are exposed, and those are
+> wired into PR CI — see [`workflow-plan.md`](workflow-plan.md) W3. For a
+> temporary stable test hostname, set `"workers_dev": true` for that environment
+> (account subdomain `<account-subdomain>`) and remove it again afterwards. Note the
+> setting is only applied by a **deploy**, not by `versions upload`.
 
 Verify:
 
@@ -578,9 +578,9 @@ Status as of the 2026-10-20 scaffold:
   with an `effect` peer conflict (`effect@^4` vs the transitive `effect@3`).
 - **Stack at scaffold time (2026-10):** Vite 9, React 19, TypeScript 7,
   `react-router` 8, shadcn v4 (Nova preset, unified `radix-ui`), Tailwind v4.
-- **`routes` disables `workers.dev`** — add `"workers_dev": true` for a
-  testable hostname; `"preview_urls": true` enables per-version Version URLs used
-  for PR previews (§6, `workflow-plan.md` W3).
+- **`workers_dev: false`** — stable `*.workers.dev` hostnames are closed;
+  `"preview_urls": true` enables per-version Version URLs used for PR previews
+  (§6, `workflow-plan.md` W3).
 - **Invoke Wrangler per app**, never at the workspace root (§6).
 - **Auth stays deferred** (see `architecture.md` §10); `/api/*` is intentionally
   public until then.

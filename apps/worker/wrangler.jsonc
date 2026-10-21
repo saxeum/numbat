@@ -3,7 +3,8 @@
   "name": "numbat-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-19",
-  "workers_dev": true,
+  // No stable *.workers.dev hostname. PR previews use per-version URLs only.
+  "workers_dev": false,
   "preview_urls": true,
   "observability": { "enabled": true },
   "ratelimits": [
@@ -31,6 +32,10 @@
   "env": {
     "staging": {
       "name": "numbat-api-staging",
+      // Staging is not a public ingress: reach it through a route behind
+      // Cloudflare Access if it is needed. No stable or per-version URL.
+      "workers_dev": false,
+      "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_VERSION": "0.0.0",
@@ -55,6 +60,10 @@
     },
     "preview": {
       "name": "numbat-api-preview",
+      // The stable preview hostname is closed; PR previews use per-version URLs
+      // and reach this Worker through the web Worker's service binding.
+      "workers_dev": false,
+      "preview_urls": true,
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_VERSION": "0.0.0",

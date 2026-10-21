@@ -3,7 +3,8 @@
   "name": "numbat-web",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-19",
-  "workers_dev": true,
+  // No stable *.workers.dev hostname. PR previews use per-version URLs only.
+  "workers_dev": false,
   "preview_urls": true,
   "assets": {
     "directory": "./dist",
@@ -15,6 +16,9 @@
   "env": {
     "preview": {
       "name": "numbat-web-preview",
+      // No stable preview hostname; PR previews use per-version URLs.
+      "workers_dev": false,
+      "preview_urls": true,
       // Preview SPA talks to the isolated API preview (never production).
       "services": [{ "binding": "API", "service": "numbat-api-preview" }],
       "routes": [],

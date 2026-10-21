@@ -22,9 +22,10 @@ export function createAuth(env: Env) {
         clientSecret: env.GOOGLE_CLIENT_SECRET,
       },
     },
-    // Password sign-in is enabled outside production only, so dev/E2E can sign
-    // in deterministically (Google OAuth can't be automated headlessly).
-    emailAndPassword: { enabled: env.ENVIRONMENT !== "production" },
+    // Password sign-in is enabled in development only, so dev/E2E can sign in
+    // deterministically (Google OAuth can't be automated headlessly). Staging
+    // and preview are publicly reachable, so they must not allow sign-up.
+    emailAndPassword: { enabled: env.ENVIRONMENT === "development" },
     trustedOrigins: [env.BETTER_AUTH_URL],
   });
 }

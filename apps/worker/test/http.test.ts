@@ -94,3 +94,29 @@ describe("environment config", () => {
     );
   });
 });
+
+describe("auth sign-up gating", () => {
+  // Staging and preview are publicly reachable; only development may self-register.
+  for (const environment of ["staging", "production"] as const) {
+    it(`disables email/password sign-up in ${environment}`, async () => {
+      const app = createApp();
+      const res = await app.fetch(
+        new Request("https://foonix.net/api/auth/sign-up/email", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: "probe@example.com",
+            password: "password1234",
+            name: "Probe",
+          }),
+        }),
+        { ...env, ENVIRONMENT: environment } as unknown as Env,
+      );
+
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        code: "EMAIL_PASSWORD_SIGN_UP_DISABLED",
+      });
+    });
+  }
+});
