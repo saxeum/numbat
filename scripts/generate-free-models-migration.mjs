@@ -11,6 +11,8 @@
 //   node scripts/generate-free-models-migration.mjs                    # dry run, prints SQL
 //   node scripts/generate-free-models-migration.mjs --provider=groq
 //   node scripts/generate-free-models-migration.mjs --limit=5 --sleep=500
+//   node scripts/generate-free-models-migration.mjs --retries=3
+//   node scripts/generate-free-models-migration.mjs --concurrency=8    # parallel probes per provider
 //   node scripts/generate-free-models-migration.mjs --write            # write the .sql
 //   node scripts/generate-free-models-migration.mjs --allow-missing    # skip keyless providers
 //
@@ -39,10 +41,14 @@ const providerFilter =
         .filter(Boolean)
     : null;
 const limit = args.limit ? Number.parseInt(String(args.limit), 10) : Infinity;
-const sleepMs = args.sleep ? Number.parseInt(String(args.sleep), 10) : 300;
+const sleepMs = args.sleep ? Number.parseInt(String(args.sleep), 10) : 0;
+const retries = args.retries ? Number.parseInt(String(args.retries), 10) : 1;
+const concurrencyOverride = args.concurrency
+  ? Number.parseInt(String(args.concurrency), 10)
+  : null;
 const timeoutMs = args.timeout
   ? Number.parseInt(String(args.timeout), 10)
-  : 30_000;
+  : 12_000;
 const write = args.write === true || args.write === "true";
 const allowMissing =
   args["allow-missing"] === true || args["allow-missing"] === "true";
@@ -73,6 +79,22 @@ loadEnvFile(join(ROOT, "apps", "worker", ".dev.vars"));
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Run `fn` over `items` with at most `concurrency` in flight; order preserved. */
+async function mapPool(items, concurrency, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    for (;;) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index], index);
+    }
+  }
+  const size = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: size }, () => worker()));
+  return results;
+}
+
 function keyFor(spec) {
   for (const name of spec.keyNames) {
     const value = process.env[name];
@@ -89,13 +111,22 @@ function short(text, max = 120) {
 }
 
 async function getJson(url, headers, provider) {
-  const res = await fetch(url, {
-    headers,
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`${provider}: list models failed (HTTP ${res.status})`);
+  let status;
+  let text;
+  try {
+    const res = await fetch(url, {
+      headers,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    status = res.status;
+    text = await res.text();
+  } catch (error) {
+    throw new Error(
+      `${provider}: list models failed (${error?.name ?? error})`,
+    );
+  }
+  if (status < 200 || status >= 300) {
+    throw new Error(`${provider}: list models failed (HTTP ${status})`);
   }
   try {
     return JSON.parse(text);
@@ -218,20 +249,21 @@ function fail(status, detail) {
 async function probeGemini(key, model) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent`;
   let res;
+  let text;
   try {
     res = await fetch(url, {
       method: "POST",
       headers: { "x-goog-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 64, temperature: 0 },
+        generationConfig: { maxOutputTokens: 128, temperature: 0 },
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });
+    text = await res.text();
   } catch (error) {
     return fail(0, error?.name ?? error);
   }
-  const text = await res.text();
   if (!res.ok) return fail(res.status, text);
   let body;
   try {
@@ -249,6 +281,7 @@ async function probeGemini(key, model) {
 async function probeOpenAI(key, model) {
   const url = `${model.chatUrl}`;
   let res;
+  let text;
   try {
     res = await fetch(url, {
       method: "POST",
@@ -259,16 +292,16 @@ async function probeOpenAI(key, model) {
       body: JSON.stringify({
         model: model.id,
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 64,
+        max_tokens: 128,
         temperature: 0,
         stream: false,
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });
+    text = await res.text();
   } catch (error) {
     return fail(0, error?.name ?? error);
   }
-  const text = await res.text();
   if (!res.ok) return fail(res.status, text);
   let body;
   try {
@@ -288,6 +321,7 @@ const PROVIDERS = [
     label: "Google Gemini",
     keyNames: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
     sortBase: 10,
+    concurrency: 2,
     discover: discoverGemini,
     probe: (key, model) => probeGemini(key, model),
   },
@@ -296,6 +330,7 @@ const PROVIDERS = [
     label: "Groq",
     keyNames: ["GROQ_API_KEY"],
     sortBase: 100,
+    concurrency: 4,
     discover: discoverGroq,
     probe: (key, model) =>
       probeOpenAI(key, {
@@ -308,6 +343,7 @@ const PROVIDERS = [
     label: "NVIDIA NIM",
     keyNames: ["NVIDIA_API_KEY"],
     sortBase: 200,
+    concurrency: 6,
     discover: discoverNvidia,
     probe: (key, model) =>
       probeOpenAI(key, {
@@ -320,6 +356,7 @@ const PROVIDERS = [
     label: "OpenRouter",
     keyNames: ["OPENROUTER_API_KEY"],
     sortBase: 300,
+    concurrency: 3,
     discover: discoverOpenRouter,
     probe: (key, model) =>
       probeOpenAI(key, {
@@ -340,6 +377,9 @@ function statusLabel(result) {
   if (result.status === 200) return "EMPTY";
   return `ERR ${result.status}`;
 }
+
+// Transient failures worth retrying before excluding a model.
+const RETRYABLE = new Set([429, 500, 502, 503, 504]);
 
 // --- main -----------------------------------------------------------------
 
@@ -396,8 +436,26 @@ for (const spec of inScope) {
 
   const passed = [];
   const counts = new Map();
-  for (const [index, model] of tested.entries()) {
-    const result = await spec.probe(key, model);
+  const poolSize = concurrencyOverride ?? spec.concurrency ?? 4;
+  const results = await mapPool(tested, poolSize, async (model) => {
+    let result = await spec.probe(key, model);
+    for (
+      let attempt = 1;
+      attempt <= retries && !result.ok && RETRYABLE.has(result.status);
+      attempt++
+    ) {
+      const wait = result.status === 429 ? 3_000 * attempt : 1_000 * attempt;
+      console.log(
+        `  retry ${attempt}/${retries}  ${model.id} (${statusLabel(result)}, waiting ${wait}ms)`,
+      );
+      await sleep(wait);
+      result = await spec.probe(key, model);
+    }
+    if (sleepMs > 0) await sleep(sleepMs);
+    return { model, result };
+  });
+
+  for (const { model, result } of results) {
     counts.set(statusLabel(result), (counts.get(statusLabel(result)) ?? 0) + 1);
     if (result.ok) {
       passed.push(model);
@@ -407,7 +465,6 @@ for (const spec of inScope) {
         `  ${statusLabel(result).padEnd(13)} ${model.id}${result.detail ? ` — ${result.detail}` : ""}`,
       );
     }
-    if (index < tested.length - 1) await sleep(sleepMs);
   }
 
   for (const [label, count] of counts) {
@@ -457,7 +514,7 @@ const row = (model) =>
 
 const sql = [
   `-- Generated by scripts/generate-free-models-migration.mjs on ${new Date().toISOString()}`,
-  `-- Every model below passed a real chat smoke test (prompt: ${JSON.stringify(prompt)}, max 64 tokens).`,
+  `-- Every model below passed a real chat smoke test (prompt: ${JSON.stringify(prompt)}, max 128 tokens).`,
   missing.length > 0
     ? `-- Providers omitted (no key this run): ${missing.map((s) => s.id).join(", ")}`
     : "-- All in-scope providers were tested.",
