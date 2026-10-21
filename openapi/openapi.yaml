@@ -168,6 +168,25 @@ paths:
                 provider:
                   type: string
                   enum: [gemini, groq]
+            examples:
+              groq:
+                summary: Groq completion (requires a Groq credential)
+                value:
+                  model: openai/gpt-oss-20b
+                  messages:
+                    - role: user
+                      content: hello
+                  stream: false
+                  provider: groq
+              gemini:
+                summary: Gemini completion (requires a Gemini credential)
+                value:
+                  model: gemini-flash-lite-latest
+                  messages:
+                    - role: user
+                      content: hello
+                  stream: false
+                  provider: gemini
       responses:
         "200":
           description: OpenAI-shaped completion (JSON, or SSE when `stream`)
