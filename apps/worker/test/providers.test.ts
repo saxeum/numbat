@@ -27,6 +27,21 @@ describe("verifyProviderKey", () => {
     });
   });
 
+  it("verifies an NVIDIA key with Bearer auth", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    await expect(
+      verifyProviderKey(
+        "nvidia",
+        "nvapi-abc",
+        fetchMock as unknown as typeof fetch,
+      ),
+    ).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://integrate.api.nvidia.com/v1/models",
+      { headers: { authorization: "Bearer nvapi-abc" } },
+    );
+  });
+
   it("reports a network failure as unreachable", async () => {
     const failing = vi.fn(async () => {
       throw new Error("connection refused");

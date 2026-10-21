@@ -47,7 +47,9 @@ export function GatewayPage() {
   const revokeApiKey = useRevokeApiKey();
   const chat = useChat();
 
-  const [provider, setProvider] = useState<"gemini" | "groq">("groq");
+  const [provider, setProvider] = useState<"gemini" | "groq" | "nvidia">(
+    "groq",
+  );
   const [apiKey, setApiKey] = useState("");
   const [keyName, setKeyName] = useState("");
   const [newToken, setNewToken] = useState<string | null>(null);
@@ -132,12 +134,15 @@ export function GatewayPage() {
                 id="provider"
                 value={provider}
                 onChange={(event) =>
-                  setProvider(event.target.value as "gemini" | "groq")
+                  setProvider(
+                    event.target.value as "gemini" | "groq" | "nvidia",
+                  )
                 }
                 className={selectClass}
               >
                 <option value="groq">Groq</option>
                 <option value="gemini">Google Gemini</option>
+                <option value="nvidia">NVIDIA</option>
               </select>
             </div>
             <div className="flex min-w-52 flex-1 flex-col gap-1.5">

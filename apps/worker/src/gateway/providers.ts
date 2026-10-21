@@ -1,8 +1,8 @@
-// Provider catalog for the POC. Only Google Gemini and Groq are supported for
-// the first test (see Jira KAN-19). Knows how to verify a key and how to talk to
-// each provider's chat API.
+// Provider catalog. Google Gemini, Groq, and NVIDIA are supported; all three
+// offer a free developer tier. Knows how to verify a key and how to talk to each
+// provider's chat API.
 
-export type ProviderId = "gemini" | "groq";
+export type ProviderId = "gemini" | "groq" | "nvidia";
 export type ProviderDialect = "openai" | "gemini";
 
 export interface ProviderSpec {
@@ -34,6 +34,16 @@ const PROVIDERS: Record<ProviderId, ProviderSpec> = {
     chatUrl: "https://api.groq.com/openai/v1/chat/completions",
     auth: (apiKey) => ({ authorization: `Bearer ${apiKey}` }),
   },
+  nvidia: {
+    id: "nvidia",
+    label: "NVIDIA",
+    dialect: "openai",
+    // NVIDIA NIM exposes an OpenAI-compatible API; the free tier is provisioned
+    // at https://build.nvidia.com (keys start with `nvapi-`).
+    verifyUrl: "https://integrate.api.nvidia.com/v1/models",
+    chatUrl: "https://integrate.api.nvidia.com/v1/chat/completions",
+    auth: (apiKey) => ({ authorization: `Bearer ${apiKey}` }),
+  },
 };
 
 export const PROVIDER_IDS = Object.keys(PROVIDERS) as ProviderId[];
@@ -43,7 +53,7 @@ export function getProvider(id: ProviderId): ProviderSpec {
 }
 
 export function isProviderId(value: string): value is ProviderId {
-  return value === "gemini" || value === "groq";
+  return value === "gemini" || value === "groq" || value === "nvidia";
 }
 
 export type VerifyResult =

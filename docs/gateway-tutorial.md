@@ -4,9 +4,11 @@ How to verify the BYOK gateway works: connect a provider key, list free models,
 and get a real completion through one OpenAI-compatible endpoint. Keys are stored
 **encrypted at rest in D1**, and the GUI is reachable **only after sign-in**.
 
-> Scope: POC. Providers are **Google Gemini** and **Groq** only. The free-tier
-> model catalog is **static** (seeded in D1, not live-probed). Routing is
-> per-request provider resolution — no scoring/failover yet.
+> Scope: POC. Providers are **Google Gemini**, **NVIDIA**, and **Groq** (all with
+> free tiers). The free-tier model catalog is **static** (seeded in D1, not
+> live-probed). Routing is per-request provider resolution — no scoring/failover
+> yet. For a user-facing walkthrough of getting free keys, see
+> [`free-token-onboarding.md`](free-token-onboarding.md).
 
 ## What exists
 
@@ -26,8 +28,9 @@ secret) wraps a per-record AES-256-GCM **DEK**; only ciphertext is written to D1
 ## 1. Prerequisites
 
 - Node 20+ and `npm ci` already run in the repo root.
-- At least one provider key to test with: **Groq** (<https://console.groq.com/keys>)
-  or **Google Gemini** (<https://aistudio.google.com/app/apikey>). Both are free-tier.
+- At least one provider key to test with: **Groq** (<https://console.groq.com/keys>),
+  **Google Gemini** (<https://aistudio.google.com/app/apikey>), or **NVIDIA**
+  (<https://build.nvidia.com>). All three are free-tier.
 - No Cloudflare account needed for local validation.
 
 ## 2. Configure local secrets
@@ -234,5 +237,5 @@ plaintext key appears in responses.
 ## Not in this POC
 
 Live free-tier probing, routing/scoring, failover, request-scoped (no-store)
-keys, external vaults, other providers, and per-tool/binary parts. See the
-`byokfree` ADRs 0001/0002 for the custody roadmap.
+keys, external vaults, providers beyond Gemini/NVIDIA/Groq, and per-tool/binary
+parts. See the `byokfree` ADRs 0001/0002 for the custody roadmap.

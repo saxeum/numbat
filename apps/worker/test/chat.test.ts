@@ -22,7 +22,7 @@ async function signUp(email: string): Promise<string> {
 
 async function connect(
   cookie: string,
-  provider: "gemini" | "groq",
+  provider: "gemini" | "groq" | "nvidia",
   apiKey: string,
 ) {
   const res = await SELF.fetch(credentialsBase, {
@@ -45,6 +45,7 @@ function stubUpstream(handlers: {
   verify?: () => Response;
   groq?: () => Response;
   gemini?: () => Response;
+  nvidia?: () => Response;
 }) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url =
@@ -59,7 +60,13 @@ function stubUpstream(handlers: {
     if (url.includes("api.groq.com") && url.endsWith("/chat/completions")) {
       return handlers.groq?.() ?? jsonResponse({});
     }
-    // Provider verification (both providers) hits a models list.
+    if (
+      url.includes("integrate.api.nvidia.com") &&
+      url.endsWith("/chat/completions")
+    ) {
+      return handlers.nvidia?.() ?? jsonResponse({});
+    }
+    // Provider verification (all providers) hits a models list.
     return handlers.verify?.() ?? jsonResponse({ data: [], models: [] });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -109,6 +116,43 @@ describe("chat completions (authenticated)", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("x-byokfree-provider")).toBe("groq");
+    const body = (await res.json()) as {
+      choices: { message: { content: string } }[];
+    };
+    expect(body.choices[0]?.message.content).toBe("pong");
+  });
+
+  it("proxies NVIDIA (OpenAI dialect) using the stored key", async () => {
+    const cookie = await signUp("chat-nvidia@example.com");
+    stubUpstream({
+      nvidia: () =>
+        jsonResponse({
+          id: "chatcmpl-nv",
+          object: "chat.completion",
+          created: 1,
+          model: "meta/llama-3.3-70b-instruct",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "pong" },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+    });
+    await connect(cookie, "nvidia", "nvapi_test");
+
+    const res = await SELF.fetch(chatBase, {
+      method: "POST",
+      headers: { ...json, cookie },
+      body: JSON.stringify({
+        model: "meta/llama-3.3-70b-instruct",
+        messages: [{ role: "user", content: "ping" }],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-byokfree-provider")).toBe("nvidia");
     const body = (await res.json()) as {
       choices: { message: { content: string } }[];
     };

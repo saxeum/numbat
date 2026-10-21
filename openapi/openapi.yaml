@@ -141,7 +141,7 @@ paths:
       summary: OpenAI-compatible chat completion (proxied)
       description: |
         Proxies to the resolved provider using the caller's stored, encrypted
-        credential. POC supports `gemini` and `groq`. Pass `stream: true` for
+        credential. Supports `gemini`, `groq`, and `nvidia`. Pass `stream: true` for
         Server-Sent Events. The response carries `x-byokfree-provider` and
         `x-byokfree-model` headers.
       security:
@@ -167,7 +167,7 @@ paths:
                   type: boolean
                 provider:
                   type: string
-                  enum: [gemini, groq]
+                  enum: [gemini, groq, nvidia]
             examples:
               groq:
                 summary: Groq completion (requires a Groq credential)
@@ -187,6 +187,15 @@ paths:
                       content: hello
                   stream: false
                   provider: gemini
+              nvidia:
+                summary: NVIDIA completion (requires an NVIDIA credential)
+                value:
+                  model: meta/llama-3.3-70b-instruct
+                  messages:
+                    - role: user
+                      content: hello
+                  stream: false
+                  provider: nvidia
       responses:
         "200":
           description: OpenAI-shaped completion (JSON, or SSE when `stream`)
@@ -354,7 +363,7 @@ components:
           type: string
         provider:
           type: string
-          enum: [gemini, groq]
+          enum: [gemini, groq, nvidia]
         label:
           type: string
         fingerprint:
@@ -370,7 +379,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [gemini, groq]
+          enum: [gemini, groq, nvidia]
         label:
           type: string
           maxLength: 64
@@ -390,7 +399,7 @@ components:
           type: string
         x-provider:
           type: string
-          enum: [gemini, groq]
+          enum: [gemini, groq, nvidia]
         x-context:
           type: integer
         x-free:

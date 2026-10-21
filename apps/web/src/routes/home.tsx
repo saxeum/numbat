@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import {
   ArrowRight,
+  ExternalLink,
   Globe,
   KeyRound,
   PlugZap,
@@ -14,18 +15,40 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
-const providers = ["Groq", "Google Gemini", "OpenAI-compatible", "Cloudflare"];
+/** Onboarding guide for obtaining free provider keys. */
+const GUIDE_URL =
+  "https://github.com/saxeum/numbat/blob/main/docs/free-token-onboarding.md";
+
+const providers = ["Google Gemini", "NVIDIA", "Groq", "OpenAI-compatible"];
+
+const freeProviders = [
+  {
+    name: "Google Gemini",
+    url: "https://aistudio.google.com/app/apikey",
+    note: "Free daily quota in Google AI Studio. Keys start with AIza.",
+  },
+  {
+    name: "NVIDIA",
+    url: "https://build.nvidia.com",
+    note: "Free developer credits on NVIDIA NIM. Keys start with nvapi-.",
+  },
+  {
+    name: "Groq",
+    url: "https://console.groq.com/keys",
+    note: "Fast free inference on open models. Keys start with gsk_.",
+  },
+];
 
 const features = [
+  {
+    icon: PlugZap,
+    title: "Free tiers, your keys",
+    body: "Connect free keys from Google Gemini, NVIDIA, or Groq. Foonix verifies each key against the provider before saving it.",
+  },
   {
     icon: Terminal,
     title: "OpenAI-compatible",
     body: "The chat endpoint speaks the OpenAI wire format, so existing SDKs and tools work with one base URL change.",
-  },
-  {
-    icon: PlugZap,
-    title: "Bring your own key",
-    body: "Connect a Groq or Google Gemini key from the dashboard. Foonix verifies it against the provider before saving.",
   },
   {
     icon: ShieldCheck,
@@ -52,23 +75,23 @@ const features = [
 const steps = [
   {
     n: "01",
-    title: "Connect a provider key",
-    body: "Paste a Groq or Gemini key. Foonix verifies it, then stores it encrypted.",
+    title: "Get a free provider key",
+    body: "Grab a free key from Google AI Studio, NVIDIA build, or Groq Console — our guide walks you through each.",
   },
   {
     n: "02",
+    title: "Connect it to Foonix",
+    body: "Paste it into the gateway. Foonix verifies it against the provider, then stores it encrypted.",
+  },
+  {
+    n: "03",
     title: "Create an API token",
     body: "Mint a bearer token for your app or CLI from the gateway dashboard.",
   },
   {
-    n: "03",
-    title: "Call the gateway",
-    body: "POST to /api/chat/completions with any OpenAI-compatible client.",
-  },
-  {
     n: "04",
-    title: "Swap models freely",
-    body: "Pick from the catalog per request — no code changes, no new SDK.",
+    title: "Call the gateway",
+    body: "POST to /api/chat/completions with any OpenAI-compatible client — no new SDK.",
   },
 ];
 
@@ -137,36 +160,39 @@ export function HomePage() {
           <div className="relative mx-auto grid w-full max-w-6xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
             <div>
               <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.06] px-3 py-1.5 text-xs font-medium tracking-[0.14em] text-primary uppercase">
-                ● Open gateway · v1
+                ● Free AI tokens · Bring your own key
               </span>
               <h1 className="text-5xl font-extrabold tracking-[-0.035em] text-balance sm:text-6xl">
-                One gateway.
+                All your free AI tokens.
                 <br />
                 <span className="bg-[linear-gradient(120deg,var(--primary),var(--brand-2))] bg-clip-text text-transparent">
-                  Every model.
+                  One gateway.
                 </span>
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-                A single, OpenAI-compatible endpoint in front of your AI
-                providers. Connect a key, issue a token, and route chat requests
-                without touching your client code.
+                Foonix puts the free tiers of Google Gemini, NVIDIA, and Groq
+                behind one OpenAI-compatible endpoint. Bring your own keys and
+                build for{" "}
+                <span className="font-medium text-foreground">$0</span>.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
                   <Link to="/gateway">
-                    Open the gateway
+                    Start free
                     <ArrowRight />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <a href="/api/docs">Read the docs</a>
+                  <a href={GUIDE_URL} target="_blank" rel="noreferrer">
+                    Get free API keys
+                  </a>
                 </Button>
               </div>
               <p className="mt-5 text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">
-                  Bring your own key
+                  Free tiers of Gemini, NVIDIA &amp; Groq
                 </span>{" "}
-                · Works with Groq &amp; Gemini · No CORS to configure
+                · No credit card · No CORS to configure
               </p>
             </div>
             <TerminalCard />
@@ -177,7 +203,7 @@ export function HomePage() {
         <div className="border-y border-border py-7">
           <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6 px-6">
             <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
-              Works with
+              Free tiers from
             </span>
             <div className="flex flex-wrap items-center gap-x-10 gap-y-3 text-lg font-bold tracking-tight text-muted-foreground/60">
               {providers.map((provider) => (
@@ -187,15 +213,59 @@ export function HomePage() {
           </div>
         </div>
 
+        {/* Free keys */}
+        <section className="mx-auto w-full max-w-6xl px-6 py-16">
+          <div className="rounded-2xl border border-border bg-card p-8">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-xl">
+                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                  Get a free key in minutes
+                </h2>
+                <p className="mt-2 text-muted-foreground">
+                  Every supported provider has a free tier. Create a key, paste
+                  it into Foonix, and you are live.
+                </p>
+              </div>
+              <a
+                href={GUIDE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Full onboarding guide →
+              </a>
+            </div>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              {freeProviders.map((provider) => (
+                <a
+                  key={provider.name}
+                  href={provider.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group rounded-xl border border-border bg-background/40 p-5 transition-colors hover:border-primary/40"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">{provider.name}</h3>
+                    <ExternalLink className="size-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {provider.note}
+                  </p>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
-        <section className="mx-auto w-full max-w-6xl px-6 py-20">
+        <section className="mx-auto w-full max-w-6xl px-6 pb-20">
           <div className="mb-12 max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Everything between your app and the provider
             </h2>
             <p className="mt-4 text-muted-foreground">
               Stop rebuilding gateway plumbing in every project. Foonix handles
-              the boring parts so you can ship.
+              the boring parts so you can ship on the free tier.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
