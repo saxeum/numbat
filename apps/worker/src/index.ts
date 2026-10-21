@@ -68,14 +68,28 @@ export default {
   fetch: app.fetch,
   /** Nightly free-model catalog refresh (KAN-44). */
   scheduled(event, env, ctx) {
+    // `event.cron` is the matched expression, but can be empty when a
+    // scheduled event is invoked without one (e.g. `--test-scheduled`).
+    const trigger = event.cron || "cron";
     ctx.waitUntil(
-      runCatalogSync(env, { trigger: event.cron ?? "cron" }).then((summary) => {
-        console.log("catalog sync run finished", {
-          runId: summary.runId,
-          status: summary.status,
-          providers: summary.providers.length,
-        });
-      }),
+      runCatalogSync(env, { trigger })
+        .then((summary) => {
+          console.log("catalog sync run finished", {
+            runId: summary.runId,
+            trigger,
+            status: summary.status,
+            providers: summary.providers.length,
+          });
+        })
+        .catch((error: unknown) => {
+          // Re-throw so the invocation is recorded as a failure rather than
+          // vanishing into an unhandled rejection.
+          console.error("catalog sync run failed", {
+            trigger,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        }),
     );
   },
 } satisfies ExportedHandler<Env>;

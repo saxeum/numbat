@@ -111,11 +111,12 @@ interface RunRow {
   trigger: string;
   finished_at: string | null;
   providers: string;
+  error: string | null;
 }
 
 async function runRow(id: string): Promise<RunRow | undefined> {
   const result = await env.DB.prepare(
-    "SELECT status, trigger, finished_at, providers FROM catalog_runs WHERE id = ?",
+    "SELECT status, trigger, finished_at, providers, error FROM catalog_runs WHERE id = ?",
   )
     .bind(id)
     .all<RunRow>();
@@ -183,7 +184,37 @@ describe("catalog sync", () => {
     expect(run?.status).toBe("ok");
     expect(run?.trigger).toBe("cron");
     expect(run?.finished_at).toBe("2026-01-01T03:17:00.000Z");
+    expect(run?.error).toBeNull();
     expect(JSON.parse(run?.providers ?? "[]")).toHaveLength(4);
+  });
+
+  it("records and re-throws a failure that escapes provider isolation", async () => {
+    // A provider listing failure is contained; this simulates the D1 write
+    // itself failing, which must be recorded on the run and surfaced.
+    const brokenDb = new Proxy(env.DB, {
+      get(target, property, receiver) {
+        if (property === "batch") {
+          return () => {
+            throw new Error("batch exploded");
+          };
+        }
+        const value = Reflect.get(target, property, receiver) as unknown;
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    await expect(
+      runCatalogSync({ ...testEnv(), DB: brokenDb } as unknown as Env, {
+        trigger: "cron",
+        fetchImpl: catalogFetch(),
+      }),
+    ).rejects.toThrow(/catalog sync failed: batch exploded/);
+
+    const latest = await env.DB.prepare(
+      "SELECT status, error FROM catalog_runs ORDER BY started_at DESC LIMIT 1",
+    ).all<{ status: string; error: string | null }>();
+    expect(latest.results[0]?.status).toBe("failed");
+    expect(latest.results[0]?.error).toContain("batch exploded");
   });
 
   it("does not re-probe models that are already in the catalog", async () => {

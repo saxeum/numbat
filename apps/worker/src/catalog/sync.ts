@@ -375,49 +375,75 @@ export async function runCatalogSync(
 
   const providers: ProviderOutcome[] = [];
   let probeBudget = config.probeLimit;
+  // A failure that escapes per-provider isolation (e.g. the D1 write itself).
+  let failure: string | null = null;
 
-  for (const spec of specs) {
-    const outcome = await syncProvider({
-      spec,
-      apiKey: vars[spec.keyEnv],
-      db,
-      config,
-      fetchImpl,
-      now,
-      sleep,
-      probeBudget,
-    });
-    probeBudget -= outcome.probed;
-    providers.push(outcome);
-    console.log("catalog sync", {
-      runId,
-      provider: outcome.provider,
-      status: outcome.status,
-      listed: outcome.listed,
-      added: outcome.added,
-      removed: outcome.removed,
-      probed: outcome.probed,
-      dropped: outcome.dropped,
-      note: outcome.note,
-    });
+  try {
+    for (const spec of specs) {
+      const outcome = await syncProvider({
+        spec,
+        apiKey: vars[spec.keyEnv],
+        db,
+        config,
+        fetchImpl,
+        now,
+        sleep,
+        probeBudget,
+      });
+      probeBudget -= outcome.probed;
+      providers.push(outcome);
+      console.log("catalog sync", {
+        runId,
+        provider: outcome.provider,
+        status: outcome.status,
+        listed: outcome.listed,
+        added: outcome.added,
+        removed: outcome.removed,
+        probed: outcome.probed,
+        dropped: outcome.dropped,
+        note: outcome.note,
+      });
+    }
+  } catch (error) {
+    failure = error instanceof Error ? error.message : String(error);
+    console.error("catalog sync aborted", { runId, trigger, error: failure });
   }
 
   const finishedAt = now().toISOString();
   const ran = providers.filter((provider) => provider.status !== "skipped");
   const status: RunSummary["status"] =
-    ran.length === 0
-      ? "skipped"
-      : ran.every((provider) => provider.status === "failed")
-        ? "failed"
-        : ran.some((provider) => provider.status === "failed")
-          ? "partial"
-          : "ok";
+    failure !== null
+      ? "failed"
+      : ran.length === 0
+        ? "skipped"
+        : ran.every((provider) => provider.status === "failed")
+          ? "failed"
+          : ran.some((provider) => provider.status === "failed")
+            ? "partial"
+            : "ok";
 
   if (!config.dryRun) {
-    await db
-      .update(catalogRuns)
-      .set({ finishedAt, status, providers: JSON.stringify(providers) })
-      .where(eq(catalogRuns.id, runId));
+    try {
+      await db
+        .update(catalogRuns)
+        .set({
+          finishedAt,
+          status,
+          providers: JSON.stringify(providers),
+          error: failure,
+        })
+        .where(eq(catalogRuns.id, runId));
+    } catch (error) {
+      // Never mask the original failure with a bookkeeping failure.
+      console.error("catalog sync: could not record the run", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  if (failure !== null) {
+    throw new Error(`catalog sync failed: ${failure}`);
   }
 
   return {
