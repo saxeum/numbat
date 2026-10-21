@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/features/auth/client";
@@ -56,6 +57,8 @@ export function GatewayPage() {
   const [copied, setCopied] = useState(false);
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [stream, setStream] = useState(true);
+  const [live, setLive] = useState("");
 
   if (isPending) {
     return (
@@ -101,9 +104,12 @@ export function GatewayPage() {
   async function onSend(event: FormEvent) {
     event.preventDefault();
     if (!effectiveModel || !prompt.trim()) return;
+    setLive("");
     await chat.mutateAsync({
       model: effectiveModel,
       messages: [{ role: "user", content: prompt.trim() }],
+      stream,
+      onToken: stream ? (delta) => setLive((prev) => prev + delta) : undefined,
     });
     setPrompt("");
   }
@@ -329,6 +335,16 @@ export function GatewayPage() {
                 ))}
               </select>
             </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="stream"
+                checked={stream}
+                onCheckedChange={(value) => setStream(value === true)}
+              />
+              <Label htmlFor="stream" className="text-sm font-normal">
+                Stream response
+              </Label>
+            </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="prompt">Prompt</Label>
               <Input
@@ -351,13 +367,19 @@ export function GatewayPage() {
           {chat.isError ? (
             <p className="text-sm text-destructive">{chat.error.message}</p>
           ) : null}
-          {chat.data ? (
+          {chat.isPending || chat.data ? (
             <div className="rounded-xl border border-border bg-background/60 p-4">
               <p className="text-xs text-muted-foreground">
-                served by {chat.data.provider} · {chat.data.model}
+                {chat.data
+                  ? `served by ${chat.data.provider} · ${chat.data.model}`
+                  : stream
+                    ? "streaming…"
+                    : "waiting…"}
               </p>
               <p className="mt-2 whitespace-pre-wrap">
-                {chat.data.content || "(empty)"}
+                {(chat.isPending && stream
+                  ? live || "…"
+                  : (chat.data?.content ?? live)) || "(empty)"}
               </p>
             </div>
           ) : null}
