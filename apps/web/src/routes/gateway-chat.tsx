@@ -116,11 +116,21 @@ export function GatewayChatPage() {
       Math.max((performance.now() - startedAt.current) / 1000, 0.001)
     : null;
 
+  const usageText = chat.data?.usage
+    ? `in ${chat.data.usage.prompt ?? "—"} · out ${chat.data.usage.completion ?? "—"}${
+        chat.data.usage.reasoning !== null
+          ? ` (reasoning ${chat.data.usage.reasoning})`
+          : ""
+      }`
+    : chat.data?.tokens != null
+      ? `${chat.data.tokens} tok`
+      : "— tok";
+
   const metrics = chat.data
     ? [
         `TTFT ${chat.data.ttftMs === null ? "—" : `${Math.round(chat.data.ttftMs)} ms`}`,
         `TPS ${chat.data.tps === null ? "—" : chat.data.tps.toFixed(1)}`,
-        chat.data.tokens === null ? "— tok" : `${chat.data.tokens} tok`,
+        usageText,
         `${(chat.data.totalMs / 1000).toFixed(2)} s`,
       ].join(" · ")
     : streaming

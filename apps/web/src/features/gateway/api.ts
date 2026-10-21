@@ -77,6 +77,12 @@ export async function revokeApiKey(id: string) {
   }
 }
 
+export interface TokenUsage {
+  prompt: number | null;
+  completion: number | null;
+  reasoning: number | null;
+}
+
 export interface ChatOutcome {
   content: string;
   provider: string | null;
@@ -89,10 +95,33 @@ export interface ChatOutcome {
   tokens: number | null;
   /** Tokens per second over the generation window. */
   tps: number | null;
+  /** Exact provider token usage, when reported. */
+  usage: TokenUsage | null;
 }
 
 function rate(tokens: number | null, ms: number): number | null {
   return tokens && ms > 0 ? tokens / (ms / 1000) : null;
+}
+
+function parseUsage(raw: unknown): TokenUsage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const usage = raw as {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    completion_tokens_details?: { reasoning_tokens?: number };
+  };
+  return {
+    prompt:
+      typeof usage.prompt_tokens === "number" ? usage.prompt_tokens : null,
+    completion:
+      typeof usage.completion_tokens === "number"
+        ? usage.completion_tokens
+        : null,
+    reasoning:
+      typeof usage.completion_tokens_details?.reasoning_tokens === "number"
+        ? usage.completion_tokens_details.reasoning_tokens
+        : null,
+  };
 }
 
 export interface ChatInput {
@@ -127,11 +156,12 @@ export async function chat(input: ChatInput): Promise<ChatOutcome> {
 
   const json = (await res.json()) as {
     model?: string;
-    usage?: { completion_tokens?: number };
+    usage?: unknown;
     choices?: { message?: { content?: string } }[];
   };
+  const usage = parseUsage(json.usage);
   const totalMs = performance.now() - started;
-  const tokens = json.usage?.completion_tokens ?? null;
+  const tokens = usage?.completion ?? null;
   return {
     content: json.choices?.[0]?.message?.content ?? "",
     provider,
@@ -140,6 +170,7 @@ export async function chat(input: ChatInput): Promise<ChatOutcome> {
     totalMs,
     tokens,
     tps: rate(tokens, totalMs),
+    usage,
   };
 }
 
@@ -166,6 +197,7 @@ async function readStream(
       totalMs,
       tokens: null,
       tps: null,
+      usage: null,
     };
   }
 
@@ -176,7 +208,7 @@ async function readStream(
   let ttftMs: number | null = null;
   let lastTokenMs = 0;
   let tokenEvents = 0;
-  let usageTokens: number | null = null;
+  let usage: TokenUsage | null = null;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -193,13 +225,11 @@ async function readStream(
       try {
         const chunk = JSON.parse(payload) as {
           model?: string;
-          usage?: { completion_tokens?: number };
+          usage?: unknown;
           choices?: { delta?: { content?: string; reasoning?: string } }[];
         };
         if (chunk.model) model = chunk.model;
-        if (typeof chunk.usage?.completion_tokens === "number") {
-          usageTokens = chunk.usage.completion_tokens;
-        }
+        if (chunk.usage) usage = parseUsage(chunk.usage);
         const delta = chunk.choices?.[0]?.delta;
         const contentDelta =
           typeof delta?.content === "string" ? delta.content : "";
@@ -223,7 +253,7 @@ async function readStream(
   }
 
   const totalMs = performance.now() - started;
-  const tokens = usageTokens ?? (tokenEvents > 0 ? tokenEvents : null);
+  const tokens = usage?.completion ?? (tokenEvents > 0 ? tokenEvents : null);
   const generationMs = ttftMs !== null ? lastTokenMs - ttftMs : 0;
   // Guard against buffered/bursty delivery: assume >= ~1ms per token, else use
   // the whole-request window.
@@ -236,5 +266,6 @@ async function readStream(
     totalMs,
     tokens,
     tps: rate(tokens, denomMs),
+    usage,
   };
 }
