@@ -19,11 +19,11 @@ deployments keep working.
 | Step | Status |
 |---|---|
 | P1 Dependencies + config (drizzle-orm, drizzle-kit, D1 binding) | ✅ |
-| P2 Migrations directory + tooling (`drizzle-kit generate`) | ✅ `migrations/0000_todos.sql` |
+| P2 Migrations directory + tooling (`drizzle-kit generate`) | ✅ `migrations/0000_init.sql` |
 | P3 Local + test D1 (Miniflare, `applyD1Migrations`) | ✅ |
 | P4 Health check `database` field | ✅ |
 | P5 Environment isolation (preview/staging DB) | ✅ prod + preview + staging |
-| P6 First domain entity (`todos`) | ✅ KAN-12 |
+| P6 First domain entity | ✅ KAN-12 |
 
 ---
 
@@ -246,7 +246,7 @@ Each phase ships through `verify` + a PR preview (`workflow-plan.md` W3).
 1. **Staging env now or later?** (Phase 5 could be prod+preview only.)
 2. **Preview isolation** — preview `env` with its own DB, or keep previews
    read-only until writes exist?
-3. **First entity:** ✅ **answered — `todos`** (single-user, anonymous; see KAN-12).
+3. **First entity:** ✅ answered (see KAN-12).
 4. **Seeding** — shared, committed dev seeds, or local-only?
 
 ## 14. Related tickets

@@ -1,4 +1,11 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth-schema";
 
@@ -6,19 +13,51 @@ import { user } from "./auth-schema";
 // `@better-auth/cli generate`; do not edit by hand.
 export * from "./auth-schema";
 
-export const todos = sqliteTable(
-  "todos",
+/**
+ * Provider credentials, **encrypted at rest** (envelope encryption; see
+ * `docs/decisions/0001-key-vault.md`). Only ciphertext is stored — never the
+ * plaintext key. A per-record DEK (AES-256-GCM) encrypts the secret; the DEK is
+ * wrapped with the deployment KEK (AES-256-KW).
+ */
+export const providerCredentials = sqliteTable(
+  "provider_credentials",
   {
     id: text("id").primaryKey(),
     ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    completed: integer("completed", { mode: "boolean" })
-      .notNull()
-      .default(false),
+    provider: text("provider").notNull(), // "gemini" | "groq" (POC)
+    label: text("label").notNull().default(""),
+    keyVersion: integer("key_version").notNull(),
+    wrappedDek: text("wrapped_dek").notNull(), // base64 AES-KW(DEK)
+    iv: text("iv").notNull(), // base64 96-bit IV
+    ciphertext: text("ciphertext").notNull(), // base64 AES-GCM(secret)
+    fingerprint: text("fingerprint").notNull(), // SHA-256 of the plaintext
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
-  (table) => [index("todos_ownerId_idx").on(table.ownerId)],
+  (table) => [
+    index("provider_credentials_ownerId_idx").on(table.ownerId),
+    uniqueIndex("provider_credentials_owner_provider_label_unq").on(
+      table.ownerId,
+      table.provider,
+      table.label,
+    ),
+  ],
+);
+
+/**
+ * Static free-tier model catalog for the POC (seeded in D1; not live-probed).
+ */
+export const freeModels = sqliteTable(
+  "free_models",
+  {
+    provider: text("provider").notNull(),
+    modelId: text("model_id").notNull(),
+    label: text("label").notNull(),
+    context: integer("context"),
+    free: integer("free", { mode: "boolean" }).notNull().default(true),
+    sort: integer("sort").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.provider, table.modelId] })],
 );

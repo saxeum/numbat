@@ -1,9 +1,9 @@
 import { createBrowserRouter } from "react-router";
 
+import { GatewayPage } from "@/routes/gateway";
 import { HomePage } from "@/routes/home";
 import { NotFoundPage } from "@/routes/not-found";
 import { RouteError } from "@/routes/route-error";
-import { TodosPage } from "@/routes/todos";
 
 // Dev-only route that throws, so the error boundary is exercised end-to-end
 // (see tests/e2e). Tree-shaken out of production builds.
@@ -27,8 +27,8 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
   },
   {
-    path: "/todos",
-    element: <TodosPage />,
+    path: "/gateway",
+    element: <GatewayPage />,
     errorElement: <RouteError />,
   },
   {

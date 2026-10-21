@@ -14,7 +14,7 @@ export function SignIn() {
 
   async function onGoogle() {
     setError(null);
-    await signIn.social({ provider: "google", callbackURL: "/todos" });
+    await signIn.social({ provider: "google", callbackURL: "/" });
   }
 
   async function onPassword(event: FormEvent, mode: "in" | "up") {
@@ -32,9 +32,7 @@ export function SignIn() {
       <section className="flex w-full max-w-sm flex-col gap-6">
         <header className="flex flex-col gap-1 text-center">
           <h1 className="text-3xl font-semibold tracking-tight">Sign in</h1>
-          <p className="text-muted-foreground">
-            Sign in to see and manage your todos.
-          </p>
+          <p className="text-muted-foreground">Sign in to continue.</p>
         </header>
 
         <Button onClick={onGoogle}>Continue with Google</Button>

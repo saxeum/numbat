@@ -2,7 +2,7 @@
 
 - **Status:** Implemented (Phases 1–3; Phase 4 partial)
 - **Date:** 2026-10-20
-- **Ticket:** Jira **KAN-16** (relates to KAN-15 todo UI, KAN-12 todos)
+- **Ticket:** Jira **KAN-16**
 - **Scope:** Replace the current **code-first** `@hono/zod-openapi` setup with a
   **spec-first** pipeline: a hand-authored OpenAPI YAML is the source of truth,
   codegen produces schemas/types/clients, then routes/handlers are written against
@@ -48,8 +48,8 @@ client generation, docs, and mocks.
   the same source.
 - Enables mocks + contract tests and keeps parity with external consumers.
 
-**Trigger:** the code-first `createRoute` + `todos.openapi(...)` pattern in
-`apps/worker/src/api/routes/todos.ts` is verbose and couples the contract to the
+**Trigger:** the code-first `createRoute` + `.openapi(...)` pattern in the
+resource routes was verbose and coupled the contract to the
 implementation. (See KAN-16 description.)
 
 ## 2. Current state (to be replaced)
@@ -152,8 +152,8 @@ apps/worker/
 
 | Phase | Contents | Effort |
 |-------|----------|--------|
-| **1** | Spec + tooling: `openapi.yaml` (health + todos), redocly config, hey-api config, `api:lint`/`api:gen` scripts, CI drift check | ~0.5 day |
-| **2** | Re-implement `health` + `todos` as plain Hono routes using generated Zod validators; delete `@hono/zod-openapi` | ~0.5 day |
+| **1** | Spec + tooling: `openapi.yaml` (health), redocly config, hey-api config, `api:lint`/`api:gen` scripts, CI drift check | ~0.5 day |
+| **2** | Re-implement `health` as a plain Hono route using generated Zod validators; delete `@hono/zod-openapi` | ~0.5 day |
 | **3** | Serve `/api/openapi.json` (bundled) + Swagger UI at `/api/docs` | ~0.5 day |
 | **4** | SPA switches to generated client/TanStack hooks (pairs with KAN-15) | ~0.5 day |
 | **5** | (Optional) MSW mocks + contract tests | ~0.5 day |

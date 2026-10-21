@@ -3,7 +3,7 @@
 - **Status:** Implemented (KAN-13; Google sign-in verified in production)
 - **Date:** 2026-10-20
 - **Ticket:** Jira **KAN-13** (`[S2] User accounts and auth`, epic KAN-11)
-- **Scope:** Add user accounts and make todos per-user, starting with **Google
+- **Scope:** Add user accounts and per-user scoping, starting with **Google
   OAuth**. Resolves the deferred auth decision (`architecture.md` D8/§10).
 - **Companions:** [`architecture.md`](architecture.md) (§2, §10, §14, §16),
   [`persistence-plan.md`](persistence-plan.md) (§7 migrations),
@@ -14,8 +14,8 @@
 ## 0. Implementation
 
 Shipped in PR #20. Better Auth on the Worker (`/api/auth/*`), Google provider,
-auth tables + `todos.owner_id` migration (anonymous rows dropped), owner-scoped
-queries + 401 envelope, SPA sign-in/out with a protected `/todos`. Dev-only
+auth tables, owner-scoped queries + 401 envelope, SPA sign-in/out with a
+protected route. Dev-only
 email/password enabled outside production for tests. Google sign-in verified in
 production; secrets set for prod/staging/preview.
 
@@ -24,7 +24,7 @@ production; secrets set for prod/staging/preview.
 ## 1. Goal
 
 A visitor can **sign in with Google**, get a first-party session, and see only
-**their own** todos. Unauthenticated access to todo endpoints is rejected; the
+**their own** records. Unauthenticated access to protected endpoints is rejected; the
 data model gains an owner; sessions persist across reloads.
 
 ## 2. Decision — Better Auth (self-hosted on Workers)
@@ -34,7 +34,7 @@ Researched options (architecture §10 shortlist + the field):
 | Option | Verdict |
 |--------|---------|
 | **Better Auth** (`better-auth@1.7`) self-hosted in the API Worker | ✅ **Chosen** — D1/Drizzle adapter, Hono handler, cookie sessions, Google + more providers, no vendor |
-| Cloudflare Access | Good for internal/private apps; no app-level identity → not for per-user todos |
+| Cloudflare Access | Good for internal/private apps; no app-level identity → not for per-user data |
 | Auth.js / `@auth/core` | Works on Workers but Next-centric; more glue for Hono + D1 |
 | Lucia | In maintenance/deprecated — avoid for new work |
 | Managed IdP (Clerk/Auth0/WorkOS) | Less code but per-MAU cost + vendor; revisit for enterprise SSO later |
@@ -85,8 +85,8 @@ registered. Consequence:
 - **Better Auth tables**: `user`, `session`, `account`, `verification` — generate
   with `@better-auth/cli generate`, fold into `src/db/schema.ts`, and produce a
   Drizzle migration (forward-only, persistence-plan §7).
-- **`todos.owner_id`**: `text` FK → `user.id`, **NOT NULL**, indexed.
-- **Backfill policy for existing anonymous todos** (decide — §12): options are
+- **Owner scoping**: an `owner_id` `text` FK → `user.id`, **NOT NULL**, indexed.
+- **Backfill policy for pre-auth anonymous rows** (decide — §12): options are
   (a) delete the handful of anonymous rows (they're test data), (b) keep nullable
   and hide unowned rows, or (c) assign to a seed user. Proposed: **delete/hide**;
   the anonymous rows have no owner and shouldn't leak into the first account.
@@ -99,10 +99,10 @@ registered. Consequence:
   (`auth.api.getSession({ headers: c.req.raw.headers })`), attach `user` +
   `session` to the typed context; 401 via the standard **error envelope**
   (`UNAUTHENTICATED`).
-- **Ownership in queries**: every todo query filters `owner_id = user.id`
+- **Ownership in queries**: every owner-scoped query filters `owner_id = user.id`
   (list/create/update/delete). Cross-user access is impossible by construction;
   covered by isolation tests.
-- Contract: todo endpoints gain a `401` response; the spec (`openapi.yaml`) gets a
+- Contract: protected endpoints gain a `401` response; the spec (`openapi.yaml`) gets a
   `security` scheme (session cookie) and 401 responses — auth *routes* stay
   library-owned.
 
@@ -111,15 +111,15 @@ registered. Consequence:
 - `src/features/auth/`: `client.ts` (`createAuthClient` from `better-auth/react`,
   `baseURL: "/api/auth"`), a `useSession` hook, `SignInButton` (Google),
   `UserMenu` (name/avatar + sign out).
-- **Protected `/todos`**: unauthenticated → show a sign-in screen (or redirect to
-  `/sign-in`), then load the user's todos.
+- **Protected routes**: unauthenticated → show a sign-in screen (or redirect to
+  `/sign-in`), then load the user's data.
 - Add a `401` interceptor so an expired session bounces to sign-in.
 
 ## 8. Testing
 
 - **Worker integration**: inject a session (mock `getSession` / a test user) and
   assert (a) 401 without a session, (b) **isolation** — user A cannot read/update/
-  delete user B's todo.
+  delete user B's record.
 - **E2E**: real Google can't be automated headlessly. Proposal: enable
   **`emailAndPassword` only in dev/test** (Better Auth) so Playwright can sign in
   deterministically; Google is covered manually + by the worker tests.
@@ -139,7 +139,7 @@ registered. Consequence:
 |-------|----------|--------|
 | 1 | Better Auth + Drizzle adapter + auth tables migration; Google client + secrets; `/api/auth/*` mounted | ~0.5 day |
 | 2 | Auth middleware + `owner_id` migration + owner-scoped queries + 401 envelope + isolation tests | ~0.5 day |
-| 3 | SPA sign-in/out + session + protected `/todos` | ~0.5 day |
+| 3 | SPA sign-in/out + session + protected route | ~0.5 day |
 | 4 | E2E (dev credential provider), docs (architecture §10/§16), hardening (rate limit on auth, CSRF check) | ~0.5 day |
 
 ## 11. Approval matrix
@@ -153,7 +153,7 @@ registered. Consequence:
 
 ## 12. Open questions
 
-1. **Existing anonymous todos** — delete, hide (nullable owner), or assign?
+1. **Pre-auth anonymous rows** — delete, hide (nullable owner), or assign?
 2. **Dev/test sign-in** — enable `emailAndPassword` in dev/test for E2E?
 3. **Staging** — add a stable staging web origin so OAuth works there, or test
    auth on local + prod only?

@@ -26,8 +26,8 @@
       "description": "Service metadata"
     },
     {
-      "name": "todos",
-      "description": "Anonymous single-user todos"
+      "name": "gateway",
+      "description": "BYOK provider credentials and routing"
     }
   ],
   "paths": {
@@ -51,6 +51,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
           "503": {
             "description": "Service is unhealthy",
             "content": {
@@ -60,26 +63,30 @@
                 }
               }
             }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
     },
-    "/todos": {
+    "/credentials": {
       "get": {
-        "operationId": "listTodos",
+        "operationId": "listCredentials",
         "tags": [
-          "todos"
+          "gateway"
         ],
-        "summary": "List todos",
+        "summary": "List the caller's provider credentials (masked)",
+        "description": "Returns metadata only — never the key or its ciphertext.",
         "responses": {
           "200": {
-            "description": "All todos, newest first",
+            "description": "The caller's credentials",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Todo"
+                    "$ref": "#/components/schemas/Credential"
                   }
                 }
               }
@@ -90,32 +97,36 @@
           },
           "429": {
             "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
           }
         }
       },
       "post": {
-        "operationId": "createTodo",
+        "operationId": "createCredential",
         "tags": [
-          "todos"
+          "gateway"
         ],
-        "summary": "Create a todo",
+        "summary": "Add or replace a provider credential",
+        "description": "Verifies the key against the provider before storing it. The key is\nsealed with envelope encryption; only ciphertext is persisted.\n",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTodoRequest"
+                "$ref": "#/components/schemas/CreateCredentialRequest"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Created todo",
+            "description": "Stored (encrypted)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Todo"
+                  "$ref": "#/components/schemas/Credential"
                 }
               }
             }
@@ -128,63 +139,25 @@
           },
           "429": {
             "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
     },
-    "/todos/{id}": {
+    "/credentials/{id}": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/TodoId"
+          "$ref": "#/components/parameters/CredentialId"
         }
       ],
-      "patch": {
-        "operationId": "updateTodo",
-        "tags": [
-          "todos"
-        ],
-        "summary": "Update a todo",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTodoRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Updated todo",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Todo"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          }
-        }
-      },
       "delete": {
-        "operationId": "deleteTodo",
+        "operationId": "deleteCredential",
         "tags": [
-          "todos"
+          "gateway"
         ],
-        "summary": "Delete a todo",
+        "summary": "Delete (crypto-shred) a credential",
         "responses": {
           "204": {
             "description": "Deleted"
@@ -197,6 +170,125 @@
           },
           "429": {
             "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/models": {
+      "get": {
+        "operationId": "listModels",
+        "tags": [
+          "gateway"
+        ],
+        "summary": "List the free-tier model catalog",
+        "description": "Static POC catalog seeded in D1 (Gemini + Groq).",
+        "responses": {
+          "200": {
+            "description": "The catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/chat/completions": {
+      "post": {
+        "operationId": "chatCompletions",
+        "tags": [
+          "gateway"
+        ],
+        "summary": "OpenAI-compatible chat completion (proxied)",
+        "description": "Proxies to the resolved provider using the caller's stored, encrypted\ncredential. POC supports `gemini` and `groq`. Pass `stream: true` for\nServer-Sent Events. The response carries `x-byokfree-provider` and\n`x-byokfree-model` headers.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model",
+                  "messages"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "stream": {
+                    "type": "boolean"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "gemini",
+                      "groq"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OpenAI-shaped completion (JSON, or SSE when `stream`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "Upstream provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -212,17 +304,27 @@
       }
     },
     "parameters": {
-      "TodoId": {
+      "CredentialId": {
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Todo identifier",
         "schema": {
-          "$ref": "#/components/schemas/TodoId"
+          "type": "string",
+          "minLength": 1
         }
       }
     },
     "responses": {
+      "Error": {
+        "description": "Unexpected error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "Unauthorized": {
         "description": "No valid session",
         "content": {
@@ -265,10 +367,6 @@
       }
     },
     "schemas": {
-      "TodoId": {
-        "type": "string",
-        "minLength": 1
-      },
       "Health": {
         "type": "object",
         "required": [
@@ -293,12 +391,13 @@
           }
         }
       },
-      "Todo": {
+      "Credential": {
         "type": "object",
         "required": [
           "id",
-          "title",
-          "completed",
+          "provider",
+          "label",
+          "fingerprint",
           "createdAt",
           "updatedAt"
         ],
@@ -306,11 +405,18 @@
           "id": {
             "type": "string"
           },
-          "title": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "groq"
+            ]
+          },
+          "label": {
             "type": "string"
           },
-          "completed": {
-            "type": "boolean"
+          "fingerprint": {
+            "type": "string"
           },
           "createdAt": {
             "type": "string"
@@ -320,32 +426,86 @@
           }
         }
       },
-      "CreateTodoRequest": {
+      "CreateCredentialRequest": {
         "type": "object",
         "required": [
-          "title"
+          "provider",
+          "apiKey"
         ],
         "additionalProperties": false,
         "properties": {
-          "title": {
+          "provider": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 200
+            "enum": [
+              "gemini",
+              "groq"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1
           }
         }
       },
-      "UpdateTodoRequest": {
+      "Model": {
         "type": "object",
-        "additionalProperties": false,
-        "minProperties": 1,
+        "required": [
+          "id",
+          "object",
+          "owned_by",
+          "x-provider",
+          "x-free"
+        ],
         "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
+          "id": {
+            "type": "string"
           },
-          "completed": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "model"
+            ]
+          },
+          "owned_by": {
+            "type": "string"
+          },
+          "x-provider": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "groq"
+            ]
+          },
+          "x-context": {
+            "type": "integer"
+          },
+          "x-free": {
             "type": "boolean"
+          }
+        }
+      },
+      "ModelList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Model"
+            }
           }
         }
       },

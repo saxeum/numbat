@@ -20,7 +20,7 @@
 | Area | Status | Evidence |
 |---|---|---|
 | **Error handling** | ✅ Complete | `AppError` class, error envelope, `X-Request-ID`, structured logging in middleware |
-| **Auth** | ✅ Complete | Better Auth + Google OAuth, per-user todos with `ownerId` FK, session middleware |
+| **Auth** | ✅ Complete | Better Auth + Google OAuth, session middleware, per-user scoping |
 | **Security headers** | ✅ Enforced | CSP enforced (no report-only), HSTS, X-Frame-Options, nosniff on both workers |
 | **Input validation** | ✅ Complete | Zod + OpenAPI (spec-first with codegen) |
 | **Frontend error boundaries** | ✅ Complete | React Error Boundary + router errorElement + TanStack Query error hooks |
@@ -33,7 +33,7 @@
 - ✅ 3 isolated DBs: prod (`numbat-db`), staging, preview
 - ✅ Forward-only migrations with `d1_migrations` ledger
 - ✅ Test D1 (Miniflare) in CI via `applyD1Migrations`
-- ✅ First domain entity (`todos`) with auth-scoped ownership
+- ✅ Auth-scoped ownership pattern established
 
 ### CI/CD Pipeline — **HARDENED**
 
@@ -42,7 +42,7 @@ verify → typecheck/lint/format/audit/test/build/E2E → deploy (prod+staging) 
 ```
 
 - ✅ 13 passing unit/integration tests (Vitest + actual D1 via Miniflare)
-- ✅ 5 passing E2E tests (Playwright, incl. full todo CRUD flow)
+- ✅ 3 passing E2E tests (Playwright: home, errors, 404)
 - ✅ `npm audit --omit=dev` gated at `--audit-level=high` (no noise)
 - ✅ Post-deploy smoke test hitting live `foonix.net/api/health`
 - ✅ `main` branch protection (guard workflow prevents force-push)
@@ -52,7 +52,7 @@ verify → typecheck/lint/format/audit/test/build/E2E → deploy (prod+staging) 
 
 - ✅ Incident response runbook ([`incident-response.md`](incident-response.md), [KAN-6](https://saxeum.atlassian.net/browse/KAN-6) ✅ Done)
 - ✅ Rollback procedure **rehearsed** (`wrangler rollback` against staging)
-- ✅ Manual testing guide across all 4 environments (local/preview/staging/prod) — [`manual-testing-todos.md`](manual-testing-todos.md)
+- ✅ Manual testing guide across all 4 environments (local/preview/staging/prod)
 - ✅ D1 Time Travel recovery documented
 
 ### Live Deployment — **RUNNING**
@@ -142,9 +142,9 @@ For now: **ship features, iterate, learn.** The guardrails are in place.
 
 | Layer | Tool | Count | Coverage |
 |---|---|---|---|
-| Unit/Integration | Vitest + Miniflare D1 | 13 tests | Health, todo CRUD, error handling, request ID |
-| E2E | Playwright | 5 tests | Home, errors, 404, full todo flow (create/edit/complete/delete) |
-| Manual | Per environment | 4 envs | Local, preview, staging, prod (see [`manual-testing-todos.md`](manual-testing-todos.md)) |
+| Unit/Integration | Vitest + Miniflare D1 | 9 tests | Health, error handling, request ID |
+| E2E | Playwright | 3 tests | Home, errors, 404 |
+| Manual | Per environment | 4 envs | Local, preview, staging, prod |
 
 ---
 
@@ -155,7 +155,6 @@ For now: **ship features, iterate, learn.** The guardrails are in place.
 - **Persistence:** [`persistence-plan.md`](persistence-plan.md) — D1 + Drizzle rollout
 - **Auth:** [`auth-plan.md`](auth-plan.md) — Better Auth + Google OAuth
 - **Workflow:** [`workflow-plan.md`](workflow-plan.md) — branch/PR/CI policy
-- **Testing:** [`manual-testing-todos.md`](manual-testing-todos.md) — environment walkthroughs
 - **Operations:** [`incident-response.md`](incident-response.md) — rollback and recovery
 - **Readiness Plan:** [`production-readiness-plan.md`](production-readiness-plan.md) — P0/P1/P2 workstreams
 - **Original Assessment:** [`production-readiness-assessment.md`](production-readiness-assessment.md) — external review

@@ -5,15 +5,22 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1792462734032,
-      "tag": "0000_todos",
+      "when": 1792540875654,
+      "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1792475770445,
-      "tag": "0001_auth_and_todo_owner",
+      "when": 1792541576153,
+      "tag": "0001_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792541852801,
+      "tag": "0002_seed_free_models",
       "breakpoints": true
     }
   ]

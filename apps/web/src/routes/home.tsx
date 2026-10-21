@@ -38,7 +38,7 @@ export function HomePage() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Button asChild>
-            <Link to="/todos">Open todos</Link>
+            <Link to="/gateway">Open gateway</Link>
           </Button>
           <Button variant="outline" asChild>
             <a href="/api/health" target="_blank" rel="noreferrer">

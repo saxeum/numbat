@@ -94,7 +94,7 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 After the auth feature is wired up:
 
 1. `npm run dev`, open <http://localhost:5173>, click **Sign in with Google**.
-2. You should be redirected to Google, then back to `/todos` signed in.
+2. You should be redirected to Google, then back to the app signed in.
 3. If not, see troubleshooting below.
 
 ## 6. Troubleshooting

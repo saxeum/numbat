@@ -10,17 +10,6 @@ export const Health = z
   .passthrough();
 export type Health = z.infer<typeof Health>;
 
-export const Todo = z
-  .object({
-    id: z.string(),
-    title: z.string(),
-    completed: z.boolean(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })
-  .passthrough();
-export type Todo = z.infer<typeof Todo>;
-
 export const ErrorResponse = z
   .object({
     error: z
@@ -35,12 +24,38 @@ export const ErrorResponse = z
   .passthrough();
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 
-export const CreateTodoRequest = z.object({
-  title: z.string().min(1).max(200),
-});
-export type CreateTodoRequest = z.infer<typeof CreateTodoRequest>;
+export const Credential = z
+  .object({
+    id: z.string(),
+    provider: z.enum(["gemini", "groq"]),
+    label: z.string(),
+    fingerprint: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .passthrough();
+export type Credential = z.infer<typeof Credential>;
 
-export const UpdateTodoRequest = z
-  .object({ title: z.string().min(1).max(200), completed: z.boolean() })
-  .partial();
-export type UpdateTodoRequest = z.infer<typeof UpdateTodoRequest>;
+export const CreateCredentialRequest = z.object({
+  provider: z.enum(["gemini", "groq"]),
+  label: z.string().max(64).optional(),
+  apiKey: z.string().min(1),
+});
+export type CreateCredentialRequest = z.infer<typeof CreateCredentialRequest>;
+
+export const Model = z
+  .object({
+    id: z.string(),
+    object: z.literal("model"),
+    owned_by: z.string(),
+    "x-provider": z.enum(["gemini", "groq"]),
+    "x-context": z.number().int().optional(),
+    "x-free": z.boolean(),
+  })
+  .passthrough();
+export type Model = z.infer<typeof Model>;
+
+export const ModelList = z
+  .object({ object: z.literal("list"), data: z.array(Model) })
+  .passthrough();
+export type ModelList = z.infer<typeof ModelList>;

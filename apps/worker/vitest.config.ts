@@ -15,6 +15,9 @@ export default defineConfig({
           BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret",
           GOOGLE_CLIENT_ID: "test-client-id",
           GOOGLE_CLIENT_SECRET: "test-client-secret",
+          // Test KEK: 32 zero bytes (base64). Production sets a real secret.
+          BYOK_KEK: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          BYOK_KEK_VERSION: "1",
         },
       },
     })),

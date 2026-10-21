@@ -3,8 +3,8 @@
 - **Tag:** `v0.1.0` (annotated)
 - **Meaning:** infrastructure is done. Fork this repo and check out the tag to
   start a **new product** on the same foundation.
-- **Reference product in the tag:** an anonymous-then-per-user **todo** app, kept
-  as a worked example of the full slice (SPA → API → D1) and auth.
+- **Reference product in the tag:** the baseline shipped a worked example of the
+  full slice (SPA → API → D1) and auth; it has been removed in this fork.
 
 Companion docs: [`architecture.md`](architecture.md),
 [`scaffold-runbook.md`](scaffold-runbook.md) (how it was built),
@@ -39,22 +39,18 @@ Companion docs: [`architecture.md`](architecture.md),
 git clone <fork-url> && cd <new-repo>
 git checkout v0.1.0
 git switch -c feat/initial-product
-npm ci && npm run dev      # see docs/manual-testing-todos.md
+npm ci && npm run dev
 ```
 
 Then:
 
-**A. Remove the reference product (the todo domain).**
-- `openapi/openapi.yaml` — delete the `/todos` paths + todo schemas; keep
-  `/health` and `ErrorResponse`.
-- `apps/worker/src/db/schema.ts` — drop the `todos` table (keep the generated
-  `auth-schema` and the `user` relations); regenerate migrations.
-- `apps/worker/src/api/routes/todos.ts`, `src/db/queries/todos.ts` — remove and
-  unmount in `src/index.ts`.
-- `apps/web/src/features/todos/**`, the `/todos` route + link on home — remove.
-- Tests: `apps/worker/test/todos.test.ts`, `tests/e2e/todos.spec.ts`.
-- `npm run api:gen && (cd apps/worker && npx drizzle-kit generate --name init)`
-  (for a fresh DB you can also reset `migrations/`).
+**A. Remove the reference product.**
+This fork has already stripped the baseline's reference domain — routes, schema,
+UI, tests, OpenAPI paths, and migrations. The API now serves `/health` plus the
+product's own `/api/*` routes, and D1 migrations are auth-only. When creating a
+new baseline, keep this step as the reminder to remove the previous product
+(OpenAPI paths + schemas, Drizzle tables + queries + routes, SPA features/routes,
+tests) and then regenerate: `npm run api:gen && (cd apps/worker && npx drizzle-kit generate --name init)`.
 
 **B. Rename & re-provision** (the baseline is hard-wired to `numbat`/`foonix.net`):
 - **Names**: Worker names in both `wrangler.jsonc` (`numbat-web`, `numbat-api`,
@@ -69,9 +65,8 @@ Then:
   [`google-oauth-setup.md`](google-oauth-setup.md).
 - **GitHub**: repository secrets and any URLs in docs/CI.
 
-**C. Update the docs** (or keep as reference): replace/remove the product-specific
-plans (persistence, auth, todo-ui, manual-testing-todos) and rewrite
-`architecture.md` for the new domain.
+**C. Update the docs:** the reference product's plans have been removed from the
+fork; rewrite `architecture.md` for the new domain.
 
 ## 3. Keep as-is
 

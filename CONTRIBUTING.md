@@ -14,9 +14,7 @@ npm run dev       # API Worker (:8787) + web SPA (:5173) together
 Individual processes: `npm run dev:api`, `npm run dev:web`. Secrets live in each
 app's `.dev.vars` (gitignored).
 
-Database + feature verification is covered in
-[`docs/manual-testing-todos.md`](docs/manual-testing-todos.md) (local → staging →
-preview → prod). Apply local migrations once with
+Apply local migrations once with
 `cd apps/worker && npx wrangler d1 migrations apply numbat-db --local`.
 
 ## Day-to-day flow

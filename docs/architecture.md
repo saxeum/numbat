@@ -256,7 +256,7 @@ the API Worker, Google OAuth as the first provider.** See
 - **Why:** same-origin (`foonix.net`) keeps session cookies first-party; Better
   Auth plugs into our **D1 + Drizzle** stack (`drizzleAdapter`) and mounts on
   **Hono** (`/api/auth/*`); no vendor/MAU cost; more providers later.
-- **Enforcement** lives **inside the API Worker** (§2) — every todo query is
+- **Enforcement** lives **inside the API Worker** (§2) — every owner-scoped query is
   owner-scoped; unauthenticated requests get the standard 401 envelope.
 - **Constraint:** Google OAuth redirect URIs are exact (no wildcards), so the
   dynamic per-PR preview hosts can't use real OAuth; auth is exercised on local +
@@ -354,7 +354,7 @@ Deliberately out of scope for the first milestone; each is revisited before it
 becomes a blocker.
 
 1. **Authentication / authorization** — ✅ **implemented** (Better Auth + Google
-   OAuth, KAN-13): todos are per-user and owner-scoped; sessions are first-party
+   OAuth, KAN-13): records are per-user and owner-scoped; sessions are first-party
    cookies. See [`auth-plan.md`](auth-plan.md).
 2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
    D1 + Drizzle is the intended choice when persistence is introduced.

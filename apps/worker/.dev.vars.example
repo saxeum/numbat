@@ -1,2 +1,8 @@
 # Copy to .dev.vars for local development (gitignored).
 ENVIRONMENT=development
+
+# Envelope-encryption KEK (base64 of 32 random bytes). Generate with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# Production: wrangler secret put BYOK_KEK
+BYOK_KEK=
+BYOK_KEK_VERSION=1

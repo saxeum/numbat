@@ -45,7 +45,7 @@ numbat/
 │       ├── src/
 │       │   ├── app/         # Providers + router
 │       │   ├── components/  # Shared UI (shadcn/ui)
-│       │   ├── features/    # Feature modules (auth, todos)
+│       │   ├── features/    # Feature modules (auth, ...)
 │       │   ├── lib/         # Utils, query client, API base
 │       │   ├── routes/      # Page components
 │       │   └── worker.ts    # Cloudflare Pages Worker
@@ -80,7 +80,7 @@ numbat/
 | **D3: API** | Hono 4 + Zod 4 + OpenAPI (spec-first) | `apps/worker/src/index.ts`, `openapi/openapi.yaml` |
 | **D4: Persistence** | D1 + Drizzle ORM | `apps/worker/src/db/`, 3 isolated DBs (prod/staging/preview) |
 | **D5: Tests (unit)** | Vitest + `@cloudflare/vitest-plugin` | 13 tests with real D1 (Miniflare) |
-| **D6: Tests (E2E)** | Playwright | 5 tests incl. full todo CRUD flow |
+| **D6: Tests (E2E)** | Playwright | Home, errors, 404 |
 | **D7: CI/CD** | GitHub Actions + `wrangler` | `.github/workflows/ci.yml` |
 | **D8: Auth** | Better Auth + Google OAuth | `apps/worker/src/auth.ts`, per-user data scoping |
 | **D9: Repo** | Monorepo (npm workspaces) | Root manages all `apps/*` + `packages/*` |
@@ -110,13 +110,13 @@ numbat/
 2. requestId           // UUID + X-Request-ID header
 3. securityHeaders     // HSTS, CSP, X-Frame-Options
 4. logger              // Structured JSON (req + res)
-5. routes              // /health, /todos, /auth/*, /openapi.json, /docs
+5. routes              // /health, /auth/*, /openapi.json, /docs
 6. errorHandler        // AppError → envelope, unknown → 500 (no leak)
 ```
 
 **API patterns:**
 - **Type-safe contracts:** OpenAPI YAML → Zod schemas (codegen) → shared in `@numbat/api`
-- **Owner-scoped queries:** Every todo query filters by `ownerId` (FK to `user.id`)
+- **Owner-scoped queries:** Every owner-scoped query filters by the caller's user id (FK to `user.id`)
 - **Error envelope:** All failures return `{ error: { code, message, requestId, details? } }`
 - **Optimistic auth:** `requireSession` middleware checks session, populates `c.get('user')`
 
@@ -142,23 +142,17 @@ Feature-based folders:
   features/auth/
     ├── client.ts          # Better Auth client (same-origin)
     └── components/        # Sign-in/out UI
-  features/todos/
-    ├── api.ts            # Fetch wrappers (typed via @numbat/api)
-    ├── hooks.ts          # TanStack Query hooks (useTodos, useCreateTodo, etc.)
-    └── components/       # Todo UI components
-
 Routes (thin):
   routes/home.tsx         # Landing page
-  routes/todos.tsx        # <TodosPage /> (uses features/todos hooks)
   routes/not-found.tsx    # 404
   routes/route-error.tsx  # Error boundary for route errors
 ```
 
 **Data flow:**
-1. Component calls `useTodos()` (TanStack Query hook)
-2. Hook calls `api.listTodos()` → `GET /api/todos`
+1. Component calls a TanStack Query hook
+2. Hook calls a typed fetch wrapper → the Hono API
 3. Response validated against `@numbat/api` schemas
-4. Mutations (create/update/delete) use optimistic updates where appropriate
+4. Mutations use optimistic updates where appropriate
 5. Errors surface via query state + toast notifications
 
 ---
@@ -193,120 +187,6 @@ export const session = sqliteTable("session", {
   // ...
 });
 
-export const todos = sqliteTable("todos", {
-  id: text("id").primaryKey(),
-  ownerId: text("owner_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  completed: integer("completed", { mode: "boolean" }).notNull().default(false),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-}, (table) => [
-  index("todos_ownerId_idx").on(table.ownerId),
-]);
-```
-
-**Migration discipline:**
-- **Forward-only:** never edit an applied migration; add a new one
-- **One logical change per migration**
-- **Applied explicitly:** `wrangler d1 migrations apply <db> --remote` (gated, not automatic on deploy)
-- **Tracked in `d1_migrations` table:** `SELECT id, name, applied_at FROM d1_migrations ORDER BY id;`
-
-### Query Layer Pattern
-
-All DB access goes through typed query functions in `apps/worker/src/db/queries/`:
-
-```typescript
-// apps/worker/src/db/queries/todos.ts
-
-export function listTodos(db: Database, ownerId: string): Promise<Todo[]> {
-  return db
-    .select()
-    .from(todos)
-    .where(eq(todos.ownerId, ownerId))
-    .orderBy(desc(todos.createdAt));
-}
-
-export async function createTodo(
-  db: Database,
-  ownerId: string,
-  input: { title: string }
-): Promise<Todo> {
-  const now = new Date().toISOString();
-  const [row] = await db
-    .insert(todos)
-    .values({
-      id: crypto.randomUUID(),
-      ownerId,
-      title: input.title,
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
-  return row;
-}
-```
-
-**Owner-scoping enforcement:** Every query filters by `ownerId`; cross-user access is impossible at the query level.
-
----
-
-## 🔐 Authentication & Authorization
-
-### Stack
-
-- **Provider:** Better Auth + Google OAuth
-- **Session storage:** D1 (`session` table)
-- **Cookie:** `better-auth.session_token` (HTTP-only, same-origin)
-- **Middleware:** `requireSession` checks session + populates `c.get('user')`
-
-### Flow
-
-```
-1. User clicks "Sign in with Google"
-2. Frontend: authClient.signIn.social({ provider: "google" })
-3. Redirects to Google OAuth consent
-4. Google redirects back to /api/auth/callback/google
-5. Better Auth creates session → sets cookie
-6. Frontend: useSession() hook reads session
-7. All /api/todos requests include session cookie
-8. requireSession middleware validates → sets c.get('user')
-9. Queries filter by ownerId
-```
-
-**Security:**
-- Per-user data scoping (FK + index)
-- Session expiry
-- HTTPS-only cookies in prod
-- Same-origin (no CORS complexity)
-
----
-
-## 🧪 Testing Strategy
-
-### Unit + Integration (Vitest + Miniflare)
-
-**13 tests** in `apps/worker/test/`:
-- `health.test.ts`: health endpoint, DB probe
-- `todos.test.ts`: CRUD operations, owner scoping, validation
-- `http.test.ts`: error handling, request ID, 404 envelope
-
-**Key pattern:** Real D1 via Miniflare (not mocked):
-```typescript
-// apps/worker/vitest.config.ts
-export default defineConfig({
-  plugins: [
-    cloudflareTest(async () => ({
-      wrangler: { configPath: "./wrangler.jsonc" },
-      miniflare: {
-        bindings: { TEST_MIGRATIONS: await readD1Migrations("./migrations") },
-      },
-    })),
-  ],
-  test: { setupFiles: ["./test/apply-migrations.ts"] },
-});
 
 // test/apply-migrations.ts
 await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -316,10 +196,9 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 
 ### E2E (Playwright)
 
-**5 tests** in `tests/e2e/`:
+**3 tests** in `tests/e2e/`:
 - `home.spec.ts`: home page renders, API health reachable
 - `errors.spec.ts`: error boundary, 404 route
-- `todos.spec.ts`: **full CRUD flow** (create → edit → complete → filter → delete)
 
 **Execution:**
 - CI starts both Workers (`wrangler dev` for API + Vite for SPA)
@@ -391,9 +270,8 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 
 ### Frontend Layer
 
-✅ **Feature folders:** Auth + todos have their own `api.ts`, `hooks.ts`, `components/`  
+✅ **Feature folders:** Auth has its own `client.ts`, `components/`  
 ✅ **Optimistic updates:** Toggle + delete update cache immediately, rollback on error  
-✅ **Undo actions:** Delete shows toast with undo button (creates new todo)  
 ✅ **Error boundaries:** React Error Boundary + router errorElement catch render/loader errors  
 ✅ **Shared UI components:** shadcn/ui owned in-repo (`components/ui/`)  
 
@@ -402,7 +280,7 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 ✅ **Drizzle schema as truth:** DB types inferred from schema, not written by hand  
 ✅ **Query functions:** All DB access abstracted into typed functions  
 ✅ **No raw SQL in routes:** Routes call query functions, not `db.execute()`  
-✅ **Cascade deletes:** User deletion cascades to sessions + todos (FK constraints)  
+✅ **Cascade deletes:** User deletion cascades to sessions (FK constraints)  
 
 ### Testing Layer
 
@@ -422,11 +300,11 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 | Web source files | 29 |
 | Shared contract files | 2 |
 | Approximate LOC | ~82k (incl. deps) |
-| API routes | 5 (`/health`, `/todos` CRUD, `/auth/*`, `/openapi.json`, `/docs`) |
-| Frontend routes | 3 (`/`, `/todos`, `*` → 404) |
+| API routes | 4 (`/health`, `/auth/*`, `/openapi.json`, `/docs`) |
+| Frontend routes | 2 (`/`, `*` → 404) |
 | Middleware layers | 4 (env, requestId, security, logger) |
 | D1 databases | 3 (prod, staging, preview) |
-| Migrations | 2 (`0000_todos.sql`, `0001_auth.sql`) |
+| Migrations | 1 (`0000_init.sql`) |
 | Unit/integration tests | 13 |
 | E2E tests | 5 |
 
@@ -472,7 +350,7 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 
 ### When to revisit:
 - **>100k users:** Consider read replicas or caching layer (KV for hot data)
-- **>1M todos:** Shard D1 by user or move to distributed DB
+- **>1M rows:** Shard D1 by user or move to distributed DB
 - **Real-timefeatures:** Add Durable Objects for WebSocket/presence
 
 ---
@@ -486,7 +364,6 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 | Persistence | `persistence-plan.md` | ✅ Complete |
 | Auth implementation | `auth-plan.md`, `google-oauth-setup.md` | ✅ Complete |
 | OpenAPI workflow | `openapi-plan.md` | ✅ Complete |
-| Manual testing | `manual-testing-todos.md` | ✅ Complete |
 | Incident response | `incident-response.md` | ✅ Complete |
 | Production readiness | `production-readiness-review.md` | ✅ Complete |
 
@@ -516,5 +393,4 @@ Every test runs against a fresh in-memory D1 with migrations applied.
 - **Persistence:** [`persistence-plan.md`](persistence-plan.md)
 - **Auth:** [`auth-plan.md`](auth-plan.md)
 - **OpenAPI:** [`openapi-plan.md`](openapi-plan.md)
-- **Testing:** [`manual-testing-todos.md`](manual-testing-todos.md)
 - **Operations:** [`incident-response.md`](incident-response.md)

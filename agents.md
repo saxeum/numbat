@@ -41,14 +41,10 @@ backend, deployed to Cloudflare Workers.
   Atlassian MCP server). Backlog tickets are referenced in the readiness plan §9.
 - **Persistence plan:** see [`docs/persistence-plan.md`](docs/persistence-plan.md)
   (D1 + Drizzle, tracking ticket **KAN-10**).
-- **Manual testing:** see [`docs/manual-testing-todos.md`](docs/manual-testing-todos.md)
-  for exercising the DB + todo feature across local/staging/preview/prod.
-- **Todo UI plan:** see [`docs/todo-ui-plan.md`](docs/todo-ui-plan.md)
-  (single-user full CRUD, tracking ticket **KAN-15**).
 - **OpenAPI plan:** see [`docs/openapi-plan.md`](docs/openapi-plan.md)
   (spec-first `openapi.yaml` + codegen + Swagger UI, tracking ticket **KAN-16**).
 - **Auth plan:** see [`docs/auth-plan.md`](docs/auth-plan.md)
-  (Google OAuth via Better Auth, per-user todos, tracking ticket **KAN-13**)
+  (Google OAuth via Better Auth; tracking ticket **KAN-13**)
   and [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md) (GCP setup).
 - **Incident response:** see [`docs/incident-response.md`](docs/incident-response.md)
   (severity, rollback, D1 recovery, comms).

@@ -50,19 +50,4 @@ CREATE TABLE `verification` (
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);--> statement-breakpoint
--- Anonymous todos have no owner and are dropped (see docs/auth-plan.md §5).
--- SQLite cannot ADD a NOT NULL column without a default, so rebuild the table.
-DELETE FROM `todos`;--> statement-breakpoint
-DROP TABLE `todos`;--> statement-breakpoint
-CREATE TABLE `todos` (
-	`id` text PRIMARY KEY NOT NULL,
-	`owner_id` text NOT NULL,
-	`title` text NOT NULL,
-	`completed` integer DEFAULT false NOT NULL,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`owner_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE INDEX `todos_ownerId_idx` ON `todos` (`owner_id`);
+CREATE INDEX `verification_identifier_idx` ON `verification` (`identifier`);

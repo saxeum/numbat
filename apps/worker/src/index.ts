@@ -7,8 +7,10 @@ import { logger } from "./api/middleware/logger";
 import { rateLimit } from "./api/middleware/rate-limit";
 import { requestId } from "./api/middleware/request-id";
 import { securityHeaders } from "./api/middleware/security";
+import { chat } from "./api/routes/chat";
+import { credentials } from "./api/routes/credentials";
 import { health } from "./api/routes/health";
-import { todos } from "./api/routes/todos";
+import { models } from "./api/routes/models";
 import type { AppEnv } from "./api/types";
 import { createAuth } from "./auth";
 import { validateEnv } from "./config";
@@ -33,7 +35,9 @@ export function createApp() {
   api.all("/auth/*", (c) => createAuth(c.env).handler(c.req.raw));
 
   api.route("/health", health);
-  api.route("/todos", todos);
+  api.route("/credentials", credentials);
+  api.route("/models", models);
+  api.route("/chat", chat);
   // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.
   api.get("/openapi.json", (c) => c.json(openapi));
   api.get("/docs", swaggerUI({ url: "/api/openapi.json" }));

@@ -1,8 +1,8 @@
 # numbat — Incident Response & Rollback Runbook
 
 Practical steps for detecting, mitigating, and rolling back incidents. Companion
-to [`architecture.md`](architecture.md) §13, [`scaffold-runbook.md`](scaffold-runbook.md)
-§11, and [`manual-testing-todos.md`](manual-testing-todos.md).
+to [`architecture.md`](architecture.md) §13 and [`scaffold-runbook.md`](scaffold-runbook.md)
+§11.
 
 > Run `wrangler` from `apps/worker` (or `apps/web` for the web Worker), or pass
 > `-c apps/<app>/wrangler.jsonc`. Running it at the repo root fails (workspace).
@@ -14,7 +14,7 @@ to [`architecture.md`](architecture.md) §13, [`scaffold-runbook.md`](scaffold-r
 | Sev | Meaning | Examples | Response |
 |-----|---------|----------|----------|
 | **SEV1** | Production down / data loss / security breach | `foonix.net` 5xx for all users; DB corruption; auth bypass | Immediate; mitigate first |
-| **SEV2** | Major feature broken, workaround exists | Todos 500 for some users; sign-in failing | Same day |
+| **SEV2** | Major feature broken, workaround exists | A core API route 500s for some users; sign-in failing | Same day |
 | **SEV3** | Minor/degraded | Slow requests; one endpoint misbehaving | Next business day |
 
 ## 2. Detect

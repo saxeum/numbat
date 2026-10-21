@@ -17,6 +17,7 @@
     "ENVIRONMENT": "production",
     "APP_VERSION": "0.0.0",
     "BETTER_AUTH_URL": "https://foonix.net",
+    "BYOK_KEK_VERSION": "1",
   },
   "d1_databases": [
     {
@@ -30,7 +31,11 @@
   "env": {
     "staging": {
       "name": "numbat-api-staging",
-      "vars": { "ENVIRONMENT": "staging", "APP_VERSION": "0.0.0" },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "APP_VERSION": "0.0.0",
+        "BYOK_KEK_VERSION": "1",
+      },
       "ratelimits": [
         {
           "name": "API_RATE_LIMITER",
@@ -50,7 +55,11 @@
     },
     "preview": {
       "name": "numbat-api-preview",
-      "vars": { "ENVIRONMENT": "staging", "APP_VERSION": "0.0.0" },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "APP_VERSION": "0.0.0",
+        "BYOK_KEK_VERSION": "1",
+      },
       "ratelimits": [
         {
           "name": "API_RATE_LIMITER",
