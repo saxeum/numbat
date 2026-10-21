@@ -145,6 +145,8 @@ The chat tab becomes a two-pane workspace:
      [ Explain this code ] [ Write a regex ] [ Compare models ] [ Draft ]
 ```
 
+![New chat — empty state](images/chat-ui-claude-parity/empty-state.png)
+
 - Greeting + centered composer; the composer **docks to the bottom** after the
   first message.
 - 4 suggestion chips seed the composer.
@@ -162,6 +164,8 @@ The chat tab becomes a two-pane workspace:
 - **Error:** inline alert under the assistant slot with **Retry**.
 - **Stopped:** partial text kept, labelled "Stopped".
 - Timestamps on hover.
+
+![Conversation — user bubble, assistant markdown, metrics, streaming composer](images/chat-ui-claude-parity/conversation.png)
 
 ### 5.5 Composer
 
@@ -200,6 +204,8 @@ blank screens.
 - `<1024px`: single pane; the rail opens as a `Sheet` from a hamburger.
 - Composer is sticky at the bottom with `env(safe-area-inset-bottom)` padding.
 - Touch targets ≥ 44px.
+
+![Mobile — drawer + composer](images/chat-ui-claude-parity/mobile.png)
 
 ### 5.10 Accessibility
 

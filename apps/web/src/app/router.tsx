@@ -41,7 +41,7 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <Navigate to="chat" replace /> },
-      { path: "chat", element: <GatewayChatPage /> },
+      { path: "chat/:conversationId?", element: <GatewayChatPage /> },
       { path: "credentials", element: <GatewayCredentialsPage /> },
       { path: "tokens", element: <GatewayTokensPage /> },
     ],

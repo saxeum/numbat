@@ -52,7 +52,7 @@ export function GatewayTokensPage() {
   }
 
   return (
-    <section className={sectionClass}>
+    <section className={`${sectionClass} mx-auto w-full max-w-3xl`}>
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">API tokens</h2>
         <p className="text-sm text-muted-foreground">
