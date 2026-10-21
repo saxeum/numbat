@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 
 import { GatewayPage } from "@/routes/gateway";
+import { GuidePage } from "@/routes/guide";
 import { HomePage } from "@/routes/home";
 import { NotFoundPage } from "@/routes/not-found";
 import { RouteError } from "@/routes/route-error";
@@ -24,6 +25,11 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+    errorElement: <RouteError />,
+  },
+  {
+    path: "/guide",
+    element: <GuidePage />,
     errorElement: <RouteError />,
   },
   {

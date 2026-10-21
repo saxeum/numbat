@@ -1,5 +1,9 @@
 # Getting free provider keys (Gemini, NVIDIA, Groq)
 
+> **Published in-app at <https://foonix.net/guide>** — that public page is the
+> user-facing version (the repo is private, so a GitHub link is not reachable by
+> visitors). Keep the two in sync; this file is the developer/operator copy.
+
 Foonix is a gateway for **free AI tokens**: you bring your own free-tier
 provider keys, and Foonix puts them behind one OpenAI-compatible endpoint. This
 guide shows how to create a free key for each supported provider and connect it.

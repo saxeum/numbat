@@ -8,6 +8,7 @@ import { UserMenu } from "@/features/auth/components/user-menu";
 
 const navItems = [
   { to: "/gateway", label: "Gateway" },
+  { to: "/guide", label: "Guide" },
   { href: "/api/docs", label: "Docs" },
   { href: "/api/health", label: "Status" },
   { href: "https://github.com/saxeum/numbat", label: "GitHub", external: true },

@@ -15,10 +15,6 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
-/** Onboarding guide for obtaining free provider keys. */
-const GUIDE_URL =
-  "https://github.com/saxeum/numbat/blob/main/docs/free-token-onboarding.md";
-
 const providers = ["Google Gemini", "NVIDIA", "Groq", "OpenAI-compatible"];
 
 const freeProviders = [
@@ -183,9 +179,7 @@ export function HomePage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <a href={GUIDE_URL} target="_blank" rel="noreferrer">
-                    Get free API keys
-                  </a>
+                  <Link to="/guide">Get free API keys</Link>
                 </Button>
               </div>
               <p className="mt-5 text-sm text-muted-foreground">
@@ -226,14 +220,12 @@ export function HomePage() {
                   it into Foonix, and you are live.
                 </p>
               </div>
-              <a
-                href={GUIDE_URL}
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                to="/guide"
                 className="text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
                 Full onboarding guide →
-              </a>
+              </Link>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               {freeProviders.map((provider) => (
