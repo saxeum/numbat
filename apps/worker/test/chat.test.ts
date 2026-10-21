@@ -159,6 +159,45 @@ describe("chat completions (authenticated)", () => {
     expect(body.choices[0]?.message.content).toBe("pong");
   });
 
+  it("requests a usage chunk from OpenAI-compatible providers when streaming", async () => {
+    const cookie = await signUp("chat-usage@example.com");
+    let sent: Record<string, unknown> | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        if (url.endsWith("/chat/completions")) {
+          sent = JSON.parse(String(init?.body)) as Record<string, unknown>;
+          return new Response(
+            'data: {"choices":[{"delta":{"content":"hi"}}]}\n\ndata: [DONE]\n\n',
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          );
+        }
+        return jsonResponse({ data: [] }); // provider key verification
+      }),
+    );
+    await connect(cookie, "groq", "gsk_test");
+
+    const res = await SELF.fetch(chatBase, {
+      method: "POST",
+      headers: { ...json, cookie },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-20b",
+        stream: true,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(sent?.stream).toBe(true);
+    expect(sent?.stream_options).toEqual({ include_usage: true });
+  });
+
   it("translates Gemini responses into the OpenAI shape", async () => {
     const cookie = await signUp("chat-gemini@example.com");
     stubUpstream({

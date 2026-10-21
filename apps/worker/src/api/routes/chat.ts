@@ -126,7 +126,15 @@ chat.post("/completions", async (c) => {
     payload = toGeminiRequest(body);
   } else {
     url = spec.chatUrl;
-    payload = { ...body, model: body.model };
+    payload = {
+      ...body,
+      model: body.model,
+      // Ask OpenAI-compatible providers for a final `usage` chunk while
+      // streaming, so token counts are exact. Ignored by Gemini.
+      ...(stream
+        ? { stream_options: body.stream_options ?? { include_usage: true } }
+        : {}),
+    };
   }
 
   let upstream: Response;
