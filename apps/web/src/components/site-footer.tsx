@@ -3,7 +3,7 @@ import { Link } from "react-router";
 const links = [
   { to: "/guide", label: "Free tokens" },
   { href: "/api/docs", label: "Docs" },
-  { href: "/api/health", label: "Status" },
+  { to: "/status", label: "Status" },
   { href: "https://github.com/saxeum/numbat", label: "GitHub", external: true },
 ] as const;
 

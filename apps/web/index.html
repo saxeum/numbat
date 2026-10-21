@@ -1,15 +1,25 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#07090d" />
+    <meta name="theme-color" content="#08090a" />
     <meta
       name="description"
       content="Foonix is an OpenAI-compatible gateway for your AI providers — one endpoint, bring your own key, no CORS to configure."
     />
     <title>Foonix — One gateway. Every model.</title>
+    <script>
+      // Apply the stored theme before paint to avoid a flash. Dark by default.
+      try {
+        if (localStorage.getItem("foonix.theme") !== "light") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (error) {
+        /* ignore */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

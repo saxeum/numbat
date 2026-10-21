@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: Numbat API
+  title: Foonix API
   version: 0.0.0
   description: |
-    Public REST API for numbat, served at `/api` on `foonix.net`.
+    Public REST API for Foonix, served at `/api` on `foonix.net`.
 
     This document is the **source of truth**: server validators, TypeScript
     types, the fetch client, and the served OpenAPI document are all generated

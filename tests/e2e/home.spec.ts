@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-test("home page renders and reports the API online", async ({ page }) => {
+test("home page renders", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /one gateway/i }),
+    page.getByRole("heading", { name: /one smooth endpoint/i }),
   ).toBeVisible();
-  await expect(page.getByText("API online")).toBeVisible();
 });
 
 test("unknown deep links fall back to the SPA and render the 404 route", async ({
@@ -36,4 +35,13 @@ test("free-token guide is public and renders", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: /open ai studio/i }),
   ).toBeVisible();
+});
+
+test("status page renders live health", async ({ page }) => {
+  await page.goto("/status");
+
+  await expect(page.getByRole("heading", { name: "Status" })).toBeVisible();
+  await expect(page.getByText(/operational/i).first()).toBeVisible({
+    timeout: 15_000,
+  });
 });

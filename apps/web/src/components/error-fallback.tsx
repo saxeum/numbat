@@ -14,7 +14,7 @@ export function ErrorFallback({
   return (
     <main className="grid min-h-svh place-items-center bg-background px-6 py-16 text-foreground">
       <section className="flex max-w-md flex-col items-center gap-4 text-center">
-        <BrandMark className="size-11 text-lg" />
+        <BrandMark className="size-10" />
         <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
         <p className="text-muted-foreground">{message}</p>
         {children}

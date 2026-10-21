@@ -8,6 +8,7 @@ import { GuidePage } from "@/routes/guide";
 import { HomePage } from "@/routes/home";
 import { NotFoundPage } from "@/routes/not-found";
 import { RouteError } from "@/routes/route-error";
+import { StatusPage } from "@/routes/status";
 
 // Dev-only route that throws, so the error boundary is exercised end-to-end
 // (see tests/e2e). Tree-shaken out of production builds.
@@ -33,6 +34,11 @@ export const router = createBrowserRouter([
   {
     path: "/guide",
     element: <GuidePage />,
+    errorElement: <RouteError />,
+  },
+  {
+    path: "/status",
+    element: <StatusPage />,
     errorElement: <RouteError />,
   },
   {

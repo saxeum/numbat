@@ -1,17 +1,24 @@
 import { cn } from "cn";
 import { Link } from "react-router";
 
+/** An asymmetric blob mark with a subtle gradient. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        "grid size-[26px] shrink-0 place-items-center rounded-lg bg-[linear-gradient(135deg,var(--primary),var(--brand-2))] text-sm font-extrabold text-primary-foreground shadow-[0_0_26px_-4px_var(--ring)]",
-        className,
-      )}
-    >
-      F
-    </span>
+      className={cn("mark inline-block size-5 shrink-0", className)}
+      style={{ borderRadius: "78% 22% 48% 52% / 34% 72% 28% 66%" }}
+    />
+  );
+}
+
+/** Slowly rotating, morphing blob (empty state). */
+export function AnimatedMark({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("mark mark-blob inline-block size-12", className)}
+    />
   );
 }
 
@@ -20,11 +27,11 @@ export function Brand({ className }: { className?: string }) {
     <Link
       to="/"
       className={cn(
-        "flex items-center gap-2.5 text-[17px] font-bold tracking-tight",
+        "flex items-center gap-2 text-[15px] font-semibold tracking-tight",
         className,
       )}
     >
-      <BrandMark />
+      <BrandMark className="size-[18px]" />
       Foonix
     </Link>
   );

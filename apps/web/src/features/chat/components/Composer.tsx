@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { Link } from "react-router";
-import { ArrowUp, ChevronDown, SlidersHorizontal, Square } from "lucide-react";
+import { ArrowUp, ChevronDown, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,8 +29,6 @@ interface Props {
   onSubmit: (input: { model: string }) => void;
   streaming: boolean;
   onStop: () => void;
-  stream: boolean;
-  onStreamChange: (stream: boolean) => void;
   autoFocus?: boolean;
 }
 
@@ -40,8 +38,6 @@ export function Composer({
   onSubmit,
   streaming,
   onStop,
-  stream,
-  onStreamChange,
   autoFocus,
 }: Props) {
   const { data: session } = useSession();
@@ -121,7 +117,7 @@ export function Composer({
         No provider is connected yet.{" "}
         <Link
           to="/gateway/credentials"
-          className="text-primary underline-offset-4 hover:underline"
+          className="text-foreground underline-offset-4 hover:underline"
         >
           Connect a provider key
         </Link>{" "}
@@ -132,7 +128,7 @@ export function Composer({
 
   return (
     <form onSubmit={onFormSubmit} className="flex flex-col gap-2">
-      <div className="rounded-2xl border border-border bg-card p-2 shadow-[0_20px_50px_-34px_rgba(0,0,0,0.9)] focus-within:border-ring/60">
+      <div className="rounded-lg border border-border bg-card p-2 focus-within:border-ring/60">
         <Textarea
           ref={textareaRef}
           value={value}
@@ -141,16 +137,19 @@ export function Composer({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Message Foonix…"
-          className="max-h-[220px] resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:ring-0 dark:bg-transparent"
+          className="max-h-[220px] resize-none border-0 bg-transparent px-2 py-2 text-[15px] shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
-        <div className="flex items-center gap-2 px-1 pb-0.5">
-          <details className="relative">
+        <div className="flex items-center gap-1.5 px-1 pb-0.5 sm:gap-2">
+          <details className="relative shrink-0">
             <summary
               className={cn(
-                "flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden",
+                "flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden",
               )}
             >
-              <span className="max-w-40 truncate">{providerSummary}</span>
+              <span className="max-w-[38vw] truncate sm:max-w-52">
+                <span className="hidden sm:inline">{providerSummary}</span>
+                <span className="sm:hidden">Providers</span>
+              </span>
               <ChevronDown className="size-3.5" />
             </summary>
             <div className="absolute bottom-full z-10 mb-2 w-56 rounded-lg border border-border bg-card p-2 shadow-lg">
@@ -187,54 +186,35 @@ export function Composer({
             </div>
           </details>
 
-          <select
-            aria-label="Model"
-            value={effectiveModel}
-            onChange={(event) => setModel(event.target.value)}
-            disabled={loading || catalog.length === 0}
-            className={cn(
-              selectClass,
-              "h-8 max-w-52 rounded-full py-0 text-xs",
-            )}
-          >
-            {loading ? <option>Loading models…</option> : null}
-            {!loading && catalog.length === 0 ? (
-              <option>No models</option>
-            ) : null}
-            {catalog.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.id} ({entry["x-provider"]})
-              </option>
-            ))}
-          </select>
+          <div className="min-w-0 flex-1 sm:max-w-64">
+            <select
+              aria-label="Model"
+              title={effectiveModel}
+              value={effectiveModel}
+              onChange={(event) => setModel(event.target.value)}
+              disabled={loading || catalog.length === 0}
+              className={cn(selectClass, "h-8 w-full rounded-md py-0 text-xs")}
+            >
+              {loading ? <option>Loading models…</option> : null}
+              {!loading && catalog.length === 0 ? (
+                <option>No models</option>
+              ) : null}
+              {catalog.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.id} ({entry["x-provider"]})
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <details className="relative ml-auto">
-            <summary className="flex cursor-pointer list-none items-center rounded-full border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-              <SlidersHorizontal className="size-4" />
-            </summary>
-            <div className="absolute right-0 bottom-full z-10 mb-2 w-48 rounded-lg border border-border bg-card p-3 shadow-lg">
-              <label
-                htmlFor="stream"
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <Checkbox
-                  id="stream"
-                  checked={stream}
-                  onCheckedChange={(checked) =>
-                    onStreamChange(checked === true)
-                  }
-                />
-                <span>Stream response</span>
-              </label>
-            </div>
-          </details>
+          <div className="ml-auto" />
 
           {streaming ? (
             <Button
               type="button"
               variant="outline"
               size="icon-lg"
-              className="rounded-full"
+              className="rounded-md"
               onClick={onStop}
               aria-label="Stop"
             >
@@ -244,7 +224,7 @@ export function Composer({
             <Button
               type="submit"
               size="icon-lg"
-              className="rounded-full"
+              className="rounded-md"
               disabled={!value.trim() || !effectiveModel}
               aria-label="Send"
             >
@@ -253,9 +233,6 @@ export function Composer({
           )}
         </div>
       </div>
-      <p className="text-center text-xs text-muted-foreground">
-        Enter to send · Shift+Enter for a new line
-      </p>
     </form>
   );
 }

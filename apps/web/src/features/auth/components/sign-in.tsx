@@ -32,7 +32,7 @@ export function SignIn() {
     <main className="grid min-h-svh place-items-center bg-background px-6 py-16 text-foreground">
       <section className="flex w-full max-w-sm flex-col gap-6 rounded-2xl border border-border bg-card p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
         <header className="flex flex-col items-center gap-4 text-center">
-          <BrandMark className="size-11 text-lg" />
+          <BrandMark className="size-10" />
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
             <p className="text-sm text-muted-foreground">

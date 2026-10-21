@@ -103,7 +103,7 @@ export function MessageItem({
 
     return (
       <div className="group flex flex-col items-end gap-1">
-        <div className="max-w-[85%] rounded-2xl border border-border bg-secondary px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap">
+        <div className="max-w-[85%] text-right text-[15px] leading-relaxed whitespace-pre-wrap">
           {message.content}
         </div>
         {onEdit ? (
@@ -133,21 +133,21 @@ export function MessageItem({
 
   return (
     <div className="flex gap-3">
-      <BrandMark className="mt-0.5 size-6 rounded-md text-xs" />
+      <BrandMark className="mt-0.5 size-5" />
       <div className="min-w-0 flex-1">
         {!message.content ? (
-          <div className="text-[15px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+          <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-muted-foreground">
             {message.stopped ? "(stopped)" : "…"}
           </div>
         ) : streaming ? (
-          <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
+          <div className="text-[15px] leading-[1.7] whitespace-pre-wrap">
             {message.content}
             <span className="caret" />
           </div>
         ) : (
           <Suspense
             fallback={
-              <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
+              <div className="text-[15px] leading-[1.7] whitespace-pre-wrap">
                 {message.content}
               </div>
             }
@@ -163,7 +163,7 @@ export function MessageItem({
             </span>
           ) : null}
           {message.stopped ? <span>stopped</span> : null}
-          {metrics ? <span className="font-mono">{metrics}</span> : null}
+          {metrics ? <span>{metrics}</span> : null}
           {message.content ? (
             <button
               type="button"

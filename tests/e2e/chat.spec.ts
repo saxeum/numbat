@@ -235,9 +235,9 @@ test("chat: empty state renders for a signed-in user with a provider", async ({
   await page.goto("/gateway/chat");
   await signIn(page);
 
-  await expect(
-    page.getByRole("heading", { name: /how can i help you today/i }),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByPlaceholder("Message Foonix…")).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("chat: send a message, stream a reply, and persist the conversation", async ({
@@ -302,7 +302,7 @@ test("chat: mobile drawer opens the conversation list", async ({ page }) => {
   });
 
   await expect(page.getByRole("link", { name: "Mobile hello" })).toBeHidden();
-  await page.getByRole("button", { name: "Open conversations" }).click();
+  await page.getByRole("button", { name: "Open navigation" }).click();
   const drawer = page.getByRole("dialog");
   await expect(drawer).toBeVisible();
   await expect(
