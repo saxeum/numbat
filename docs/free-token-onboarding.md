@@ -135,6 +135,8 @@ print(
 - Keys are **per provider** and stored **encrypted** (envelope encryption); only
   ciphertext is written to the database.
 - Connect more than one provider so you can fall back when one is rate-limited.
-- The seeded catalog is **static** and may lag a provider's latest models; the
-  `"provider"` field on a chat request lets you use any model id the provider
-  accepts, even if it is not seeded.
+- The catalog is refreshed **nightly** by a cron job that lists each provider's
+  models, probes anything new, and writes the result to `free_models` — see
+  [`free-model-discovery-cron.md`](free-model-discovery-cron.md). The
+  `"provider"` field on a chat request still lets you use any model id the
+  provider accepts, even if the sync has not picked it up yet.

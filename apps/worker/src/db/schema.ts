@@ -79,9 +79,50 @@ export const freeModels = sqliteTable(
     context: integer("context"),
     free: integer("free", { mode: "boolean" }).notNull().default(true),
     sort: integer("sort").notNull().default(0),
+    /** When the catalog sync last confirmed this row (ISO-8601). */
+    lastCheckedAt: text("last_checked_at"),
+    /** When the row's label/context/note last changed (ISO-8601). */
+    updatedAt: text("updated_at"),
+    /** Why the model is considered free, e.g. "free tier (rate-limited)". */
+    note: text("note"),
   },
   (table) => [primaryKey({ columns: [table.provider, table.modelId] })],
 );
+
+/**
+ * Probe cache: models a provider lists but that a probe rejected (the key
+ * cannot use them, or they are not chat models). Without this, every nightly
+ * run would re-probe the same rejects and starve the models behind them.
+ */
+export const catalogProbes = sqliteTable(
+  "catalog_probes",
+  {
+    provider: text("provider").notNull(),
+    modelId: text("model_id").notNull(),
+    /** The probe status that caused the rejection. */
+    status: text("status").notNull(),
+    checkedAt: text("checked_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.provider, table.modelId] })],
+);
+
+/**
+ * One row per catalog sync run (KAN-44). The nightly cron refreshes
+ * `free_models` from each provider's live model list; this is the audit trail.
+ * Also the raw material for the SLO dashboards in KAN-7.
+ */
+export const catalogRuns = sqliteTable("catalog_runs", {
+  id: text("id").primaryKey(),
+  startedAt: text("started_at").notNull(),
+  finishedAt: text("finished_at"),
+  /** "cron" | "manual". */
+  trigger: text("trigger").notNull(),
+  /** "running" | "ok" | "partial" | "skipped" | "failed". */
+  status: text("status").notNull(),
+  /** JSON array of per-provider outcomes. */
+  providers: text("providers").notNull().default("[]"),
+  error: text("error"),
+});
 
 /**
  * Chat conversations and messages (KAN-39). Owner-scoped; a conversation and

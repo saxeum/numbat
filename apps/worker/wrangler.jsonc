@@ -29,6 +29,9 @@
     },
   ],
   "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
+  // Nightly free-model catalog refresh (KAN-44). Production only — staging and
+  // preview have no trigger, so provider quota is spent once per day.
+  "triggers": { "crons": ["17 3 * * *"] },
   "env": {
     "staging": {
       "name": "numbat-api-staging",

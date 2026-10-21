@@ -18,6 +18,9 @@ export default defineConfig({
           // Test KEK: 32 zero bytes (base64). Production sets a real secret.
           BYOK_KEK: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
           BYOK_KEK_VERSION: "1",
+          // Catalog sync (KAN-44): the admin token is set, the ops keys are
+          // deliberately absent so no test reaches a real provider.
+          CATALOG_ADMIN_TOKEN: "test-catalog-token",
         },
       },
     })),

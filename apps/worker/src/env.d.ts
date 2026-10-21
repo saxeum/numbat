@@ -9,4 +9,28 @@ interface Env {
   BYOK_KEK?: string;
   /** KEK version label (defaults to "1"). */
   BYOK_KEK_VERSION?: string;
+
+  // --- Free-model catalog sync (KAN-44) ---------------------------------
+  // Ops keys used only by the nightly discovery job. User credentials live
+  // encrypted in D1 and are never read by it.
+  CATALOG_GEMINI_API_KEY?: string;
+  CATALOG_GROQ_API_KEY?: string;
+  CATALOG_NVIDIA_API_KEY?: string;
+  CATALOG_OPENROUTER_API_KEY?: string;
+  /** Shared token for POST /api/catalog/refresh. */
+  CATALOG_ADMIN_TOKEN?: string;
+  /** "1" arms the cron; anything else makes it a no-op. */
+  CATALOG_ENABLED?: string;
+  /** "1" discovers and logs without writing. */
+  CATALOG_DRY_RUN?: string;
+  /** Max probes per run (default 25). */
+  CATALOG_PROBE_LIMIT?: string;
+  /** Probe parallelism override (default: per-provider). */
+  CATALOG_CONCURRENCY?: string;
+  /** "1" bypasses the >50% shrink guard. */
+  CATALOG_ALLOW_SHRINK?: string;
+  /** Days before a remembered rejection is probed again (default 7). */
+  CATALOG_REPROBE_DAYS?: string;
+  /** Per-request upstream timeout in ms (default 12000). */
+  CATALOG_TIMEOUT_MS?: string;
 }

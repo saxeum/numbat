@@ -8,6 +8,7 @@ import { logger } from "./api/middleware/logger";
 import { rateLimit } from "./api/middleware/rate-limit";
 import { requestId } from "./api/middleware/request-id";
 import { securityHeaders } from "./api/middleware/security";
+import { catalog } from "./api/routes/catalog";
 import { chat } from "./api/routes/chat";
 import { conversations } from "./api/routes/conversations";
 import { credentials } from "./api/routes/credentials";
@@ -16,6 +17,7 @@ import { keys } from "./api/routes/keys";
 import { models } from "./api/routes/models";
 import type { AppEnv } from "./api/types";
 import { createAuth } from "./auth";
+import { runCatalogSync } from "./catalog";
 import { validateEnv } from "./config";
 
 export function createApp() {
@@ -43,6 +45,8 @@ export function createApp() {
   api.route("/chat", chat);
   api.route("/conversations", conversations);
   api.route("/keys", keys);
+  // Internal ops route (shared-token gated); not part of the public API.
+  api.route("/catalog", catalog);
   // Generated from openapi/openapi.yaml (source of truth) — see docs/openapi-plan.md.
   // Authenticated only: browser navigations are redirected to sign-in.
   api.use("/openapi.json", requireSessionPage);
@@ -58,4 +62,20 @@ export function createApp() {
   return app;
 }
 
-export default createApp();
+const app = createApp();
+
+export default {
+  fetch: app.fetch,
+  /** Nightly free-model catalog refresh (KAN-44). */
+  scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runCatalogSync(env, { trigger: event.cron ?? "cron" }).then((summary) => {
+        console.log("catalog sync run finished", {
+          runId: summary.runId,
+          status: summary.status,
+          providers: summary.providers.length,
+        });
+      }),
+    );
+  },
+} satisfies ExportedHandler<Env>;
