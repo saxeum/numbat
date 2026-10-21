@@ -1,6 +1,9 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 
-import { GatewayPage } from "@/routes/gateway";
+import { GatewayLayout } from "@/routes/gateway";
+import { GatewayChatPage } from "@/routes/gateway-chat";
+import { GatewayCredentialsPage } from "@/routes/gateway-credentials";
+import { GatewayTokensPage } from "@/routes/gateway-tokens";
 import { GuidePage } from "@/routes/guide";
 import { HomePage } from "@/routes/home";
 import { NotFoundPage } from "@/routes/not-found";
@@ -34,8 +37,14 @@ export const router = createBrowserRouter([
   },
   {
     path: "/gateway",
-    element: <GatewayPage />,
+    element: <GatewayLayout />,
     errorElement: <RouteError />,
+    children: [
+      { index: true, element: <Navigate to="chat" replace /> },
+      { path: "chat", element: <GatewayChatPage /> },
+      { path: "credentials", element: <GatewayCredentialsPage /> },
+      { path: "tokens", element: <GatewayTokensPage /> },
+    ],
   },
   {
     path: "*",

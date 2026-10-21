@@ -81,6 +81,18 @@ export interface ChatOutcome {
   content: string;
   provider: string | null;
   model: string;
+  /** Time to first token for a streamed reply (ms); null when not streamed. */
+  ttftMs: number | null;
+  /** Wall-clock duration of the request (ms). */
+  totalMs: number;
+  /** Completion tokens (provider usage, else streamed-delta estimate). */
+  tokens: number | null;
+  /** Tokens per second over the generation window. */
+  tps: number | null;
+}
+
+function rate(tokens: number | null, ms: number): number | null {
+  return tokens && ms > 0 ? tokens / (ms / 1000) : null;
 }
 
 export interface ChatInput {
@@ -94,6 +106,7 @@ export interface ChatInput {
 
 export async function chat(input: ChatInput): Promise<ChatOutcome> {
   const { onToken, ...body } = input;
+  const started = performance.now();
   const res = await fetch("/api/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -106,17 +119,24 @@ export async function chat(input: ChatInput): Promise<ChatOutcome> {
   const provider = res.headers.get("x-byokfree-provider");
 
   if (input.stream) {
-    return readStream(res, input.model, provider, onToken);
+    return readStream(res, input.model, provider, onToken, started);
   }
 
   const json = (await res.json()) as {
     model?: string;
+    usage?: { completion_tokens?: number };
     choices?: { message?: { content?: string } }[];
   };
+  const totalMs = performance.now() - started;
+  const tokens = json.usage?.completion_tokens ?? null;
   return {
     content: json.choices?.[0]?.message?.content ?? "",
     provider,
     model: json.model ?? input.model,
+    ttftMs: null,
+    totalMs,
+    tokens,
+    tps: rate(tokens, totalMs),
   };
 }
 
@@ -125,7 +145,8 @@ async function readStream(
   res: Response,
   fallbackModel: string,
   provider: string | null,
-  onToken?: (delta: string) => void,
+  onToken: ((delta: string) => void) | undefined,
+  started: number,
 ): Promise<ChatOutcome> {
   const reader = res.body?.getReader();
   if (!reader) {
@@ -133,10 +154,15 @@ async function readStream(
       model?: string;
       choices?: { message?: { content?: string } }[];
     };
+    const totalMs = performance.now() - started;
     return {
       content: json.choices?.[0]?.message?.content ?? "",
       provider,
       model: json.model ?? fallbackModel,
+      ttftMs: null,
+      totalMs,
+      tokens: null,
+      tps: null,
     };
   }
 
@@ -144,6 +170,9 @@ async function readStream(
   let buffer = "";
   let content = "";
   let model = fallbackModel;
+  let ttftMs: number | null = null;
+  let deltas = 0;
+  let usageTokens: number | null = null;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -160,11 +189,17 @@ async function readStream(
       try {
         const chunk = JSON.parse(payload) as {
           model?: string;
+          usage?: { completion_tokens?: number };
           choices?: { delta?: { content?: string } }[];
         };
         if (chunk.model) model = chunk.model;
+        if (typeof chunk.usage?.completion_tokens === "number") {
+          usageTokens = chunk.usage.completion_tokens;
+        }
         const delta = chunk.choices?.[0]?.delta?.content;
         if (typeof delta === "string" && delta) {
+          if (ttftMs === null) ttftMs = performance.now() - started;
+          deltas += 1;
           content += delta;
           onToken?.(delta);
         }
@@ -174,5 +209,16 @@ async function readStream(
     }
   }
 
-  return { content, provider, model };
+  const totalMs = performance.now() - started;
+  const tokens = usageTokens ?? (deltas > 0 ? deltas : null);
+  const generationMs = totalMs - (ttftMs ?? 0);
+  return {
+    content,
+    provider,
+    model,
+    ttftMs,
+    totalMs,
+    tokens,
+    tps: rate(tokens, generationMs),
+  };
 }
