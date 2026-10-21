@@ -9,10 +9,6 @@
     {
       "url": "https://foonix.net/api",
       "description": "Production"
-    },
-    {
-      "url": "https://numbat-api-staging.<account-subdomain>.workers.dev/api",
-      "description": "Staging"
     }
   ],
   "security": [

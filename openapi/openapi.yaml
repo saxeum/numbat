@@ -11,8 +11,6 @@ info:
 servers:
   - url: https://foonix.net/api
     description: Production
-  - url: https://numbat-api-staging.<account-subdomain>.workers.dev/api
-    description: Staging
 # Everything requires a session except endpoints that opt out (e.g. /health).
 # Auth routes live under /api/auth/* (Better Auth) and are not part of this spec.
 security:
