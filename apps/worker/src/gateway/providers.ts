@@ -58,6 +58,15 @@ const PROVIDERS: Record<ProviderId, ProviderSpec> = {
 
 export const PROVIDER_IDS = Object.keys(PROVIDERS) as ProviderId[];
 
+/**
+ * Google's OpenAI shim lists model ids as `models/gemini-…`, but the native
+ * chat path (`/v1beta/models/{model}:generateContent`) already adds `models/`.
+ * Normalize to the bare name so both the picker and the gateway agree.
+ */
+export function stripModelsPrefix(id: string): string {
+  return id.startsWith("models/") ? id.slice("models/".length) : id;
+}
+
 export function getProvider(id: ProviderId): ProviderSpec {
   return PROVIDERS[id];
 }

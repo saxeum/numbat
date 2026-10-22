@@ -31,6 +31,8 @@ export interface OpenAiCompatibleConfig {
   staticModels?: ModelInfo[];
   /** Extract model records from a non-OpenAI `/models` body (e.g. Cloudflare `result[]`). */
   parseModels?: (body: unknown) => ModelRecord[];
+  /** Normalize a provider's model id (e.g. strip Gemini's `models/` prefix). */
+  normalizeId?: (id: string) => string;
   /** Optional key validation, run before any request (throws a user-facing error). */
   validateKey?: (apiKey: string) => void;
   /** Keep only models that should be probed (e.g. OpenRouter free tier). */
@@ -63,7 +65,8 @@ export function createOpenAiCompatibleAdapter(
   const chatPath = config.chatPath ?? "/chat/completions";
 
   function toModelInfo(raw: ModelRecord): ModelInfo {
-    const id = String(raw.id ?? raw.name ?? "");
+    const rawId = String(raw.id ?? raw.name ?? "");
+    const id = config.normalizeId ? config.normalizeId(rawId) : rawId;
     const displayName =
       typeof raw.name === "string"
         ? raw.name
@@ -146,7 +149,9 @@ function translateOpenAiChunk(
   const chunk = asRecord(event);
 
   if (typeof chunk.model === "string" && chunk.model.length > 0)
-    acc.resolvedModel = chunk.model;
+    acc.resolvedModel = config.normalizeId
+      ? config.normalizeId(chunk.model)
+      : chunk.model;
 
   const choices = chunk.choices;
   if (Array.isArray(choices)) {

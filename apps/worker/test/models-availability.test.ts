@@ -280,4 +280,64 @@ describe("gateway availability", () => {
     const res = await completions(cookie, "any-model-name", "groq");
     expect(res.status).toBe(200);
   });
+
+  it("strips a stored `models/` prefix from the gemini upstream URL", async () => {
+    const cookie = await signUp("gw5@example.com");
+    const ownerId = await userIdFor("gw5@example.com");
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = urlOf(input);
+        urls.push(url);
+        if (url.includes(":generateContent")) {
+          return new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  content: { parts: [{ text: "pong" }] },
+                  finishReason: "STOP",
+                },
+              ],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        return new Response("{}", { status: 200 });
+      }),
+    );
+    await createCredential(cookie, "gemini", "AQ.test");
+    await seedAvailability(ownerId, [
+      {
+        provider: "gemini",
+        modelId: "models/gemini-2.5-flash",
+        available: true,
+        lastOkAt: new Date().toISOString(),
+      },
+    ]);
+
+    const res = await completions(cookie, "models/gemini-2.5-flash");
+    expect(res.status).toBe(200);
+    expect(urls.find((u) => u.includes(":generateContent"))).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    );
+  });
+
+  it("matches a bare request against a stored `models/` prefix", async () => {
+    const cookie = await signUp("gw6@example.com");
+    const ownerId = await userIdFor("gw6@example.com");
+    stubUpstream();
+    await createCredential(cookie, "gemini", "AQ.test");
+    await seedAvailability(ownerId, [
+      {
+        provider: "gemini",
+        modelId: "models/gemini-2.5-flash",
+        available: true,
+        lastOkAt: new Date().toISOString(),
+      },
+    ]);
+
+    const res = await completions(cookie, "gemini-2.5-flash");
+    expect(res.status).toBe(200);
+  });
 });

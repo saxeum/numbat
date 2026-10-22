@@ -50,6 +50,9 @@ backend, deployed to Cloudflare Workers.
   (severity, rollback, D1 recovery, comms).
 - **Rate limiting:** see [`docs/rate-limiting.md`](docs/rate-limiting.md)
   (how it works, how to test it, Cloudflare console links).
+- **BYOK probe reports:** see [`docs/byok-probe-reports-plan.md`](docs/byok-probe-reports-plan.md)
+  (per-user probe reports + `model_availability`-driven chat and routing; epic
+  **KAN-46**).
 
 ## Verified CLI Access
 

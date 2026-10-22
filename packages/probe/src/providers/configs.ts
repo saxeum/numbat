@@ -16,6 +16,13 @@ import {
 
 const bearer = (apiKey: string) => ({ Authorization: `Bearer ${apiKey}` });
 
+/**
+ * Google's OpenAI shim lists model ids as `models/gemini-…`, but the native
+ * gateway URL (`/v1beta/models/{model}:generateContent`) adds its own segment.
+ * Strip the prefix so stored ids match the catalog and the gateway.
+ */
+const stripModelsPrefix = (id: string) => id.replace(/^models\//, "");
+
 const GEMINI_RULES: readonly ClassifyRule[] = [
   ["embedding", /embedding/],
   ["text-to-speech", /tts|text-to-speech|native-audio/],
@@ -40,6 +47,7 @@ export const gemini = createOpenAiCompatibleAdapter({
   },
   baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
   auth: bearer,
+  normalizeId: stripModelsPrefix,
   classifyRules: GEMINI_RULES,
   quota: geminiQuota,
 });

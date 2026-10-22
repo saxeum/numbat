@@ -14,6 +14,7 @@ import type { ChatCompletionRequest } from "./openai";
 import {
   getProvider,
   isProviderId,
+  stripModelsPrefix,
   type ProviderId,
   type ProviderSpec,
 } from "./providers";
@@ -89,14 +90,16 @@ async function resolveProvider(
   ownerId: string,
   model: string,
 ): Promise<ProviderId> {
-  const available = await getAvailableModel(
-    db,
-    ownerId,
-    model,
-    availabilitySince(env),
-  );
-  if (available) {
-    return requireProvider(available.provider);
+  const sinceIso = availabilitySince(env);
+  // Availability may hold either form (older Gemini rows were stored with the
+  // shim's `models/` prefix), so try the exact id and both normalizations.
+  const bare = stripModelsPrefix(model);
+  const candidates = model === bare ? [model, `models/${bare}`] : [model, bare];
+  for (const candidate of candidates) {
+    const available = await getAvailableModel(db, ownerId, candidate, sinceIso);
+    if (available) {
+      return requireProvider(available.provider);
+    }
   }
 
   if (await ownerHasAvailability(db, ownerId)) {
@@ -107,7 +110,7 @@ async function resolveProvider(
     );
   }
 
-  const match = (await listFreeModels(db)).find((m) => m.modelId === model);
+  const match = (await listFreeModels(db)).find((m) => m.modelId === bare);
   if (!match) {
     throw new AppError(
       404,
@@ -168,7 +171,7 @@ export async function prepareCompletion(
   let payload: unknown;
   if (spec.dialect === "gemini") {
     const method = stream ? "streamGenerateContent" : "generateContent";
-    url = `${spec.chatUrl}/models/${model}:${method}${stream ? "?alt=sse" : ""}`;
+    url = `${spec.chatUrl}/models/${stripModelsPrefix(model)}:${method}${stream ? "?alt=sse" : ""}`;
     payload = toGeminiRequest(body);
   } else {
     url = spec.chatUrl;

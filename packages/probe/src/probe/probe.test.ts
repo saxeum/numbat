@@ -15,6 +15,7 @@ import {
 } from "./quota";
 import { errorMessage, parseDurationMs } from "./util";
 import { ProbeAccumulator } from "./stream";
+import { gemini } from "../providers/configs";
 
 describe("classifyByRules", () => {
   it("matches the first rule and defaults to chat", () => {
@@ -202,5 +203,58 @@ describe("ProbeAccumulator", () => {
     expect(acc.ttftMs).toBeGreaterThanOrEqual(0);
     acc.pushContent(" there");
     expect(acc.content).toBe("hi there");
+  });
+});
+
+describe("gemini adapter", () => {
+  it("strips the OpenAI shim's `models/` prefix from listed ids", async () => {
+    const ctx: AdapterContext = {
+      apiKey: "k",
+      timeoutMs: 1000,
+      fetch: (async () =>
+        new Response(
+          JSON.stringify({
+            object: "list",
+            data: [
+              { id: "models/gemini-2.5-flash", object: "model" },
+              { id: "models/gemini-embedding-001", object: "model" },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        )) as unknown as typeof fetch,
+    };
+
+    const models = await gemini.listModels(ctx);
+    expect(models.map((m) => m.id)).toEqual([
+      "gemini-2.5-flash",
+      "gemini-embedding-001",
+    ]);
+    expect(models[0]!.kind).toBe("chat");
+    expect(models[1]!.kind).toBe("embedding");
+  });
+
+  it("normalizes the resolved model reported by the stream", async () => {
+    const sse =
+      'data: {"model":"models/gemini-2.5-flash","choices":[{"delta":{"content":"pong"}}]}\n\n' +
+      "n\n";
+    const ctx: AdapterContext = {
+      apiKey: "k",
+      timeoutMs: 1000,
+      fetch: (async () =>
+        new Response(sse, {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        })) as unknown as typeof fetch,
+    };
+
+    const model: ModelInfo = {
+      id: "gemini-2.5-flash",
+      kind: "chat",
+      capabilities: { chat: true },
+    };
+    const outcome = await gemini.probeChat(ctx, model);
+    expect(outcome.ok).toBe(true);
+    expect(outcome.resolvedModel).toBe("gemini-2.5-flash");
+    expect(outcome.content).toBe("pong");
   });
 });
