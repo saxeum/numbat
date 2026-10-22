@@ -2,6 +2,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -176,6 +177,116 @@ export const messages = sqliteTable(
     index("messages_conversationId_createdAt_idx").on(
       table.conversationId,
       table.createdAt,
+    ),
+  ],
+);
+
+/**
+ * One row per user-triggered probe report (KAN-46). Owner-scoped; the run
+ * probes every model the provider lists with the caller's credential.
+ */
+export const probeRuns = sqliteTable(
+  "probe_runs",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialId: text("credential_id").references(
+      () => providerCredentials.id,
+      { onDelete: "set null" },
+    ),
+    provider: text("provider").notNull(),
+    label: text("label"),
+    /** queued | running | succeeded | failed */
+    status: text("status").notNull(),
+    /** manual (cron later) */
+    trigger: text("trigger").notNull(),
+    createdAt: text("created_at").notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    durationMs: integer("duration_ms"),
+    progressDone: integer("progress_done").notNull().default(0),
+    progressTotal: integer("progress_total").notNull().default(0),
+    totalsJson: text("totals_json").notNull().default("{}"),
+    error: text("error"),
+  },
+  (table) => [
+    index("probe_runs_owner_created_idx").on(table.ownerId, table.createdAt),
+  ],
+);
+
+/** Per-model outcome of a report, including failure evidence. */
+export const probeRunModels = sqliteTable(
+  "probe_run_models",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => probeRuns.id, { onDelete: "cascade" }),
+    /** Denormalized so availability/FK-safe queries stay owner-scoped. */
+    ownerId: text("owner_id").notNull(),
+    provider: text("provider").notNull(),
+    modelId: text("model_id").notNull(),
+    resolvedModel: text("resolved_model"),
+    kind: text("kind").notNull(),
+    attempted: integer("attempted", { mode: "boolean" }).notNull(),
+    ok: integer("ok", { mode: "boolean" }).notNull(),
+    status: integer("status"),
+    statusText: text("status_text"),
+    durationMs: integer("duration_ms"),
+    ttftMs: integer("ttft_ms"),
+    completionTokens: integer("completion_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    tps: real("tps"),
+    thinking: integer("thinking", { mode: "boolean" }),
+    content: text("content"),
+    errorName: text("error_name"),
+    errorMessage: text("error_message"),
+    /** Response evidence only — request auth headers are never persisted. */
+    body: text("body"),
+    requestBody: text("request_body"),
+    headersJson: text("headers_json"),
+    quotaState: text("quota_state"),
+    quotaLimitsJson: text("quota_limits_json"),
+    quotaRetryAfterMs: integer("quota_retry_after_ms"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("probe_run_models_run_idx").on(table.runId),
+    index("probe_run_models_owner_model_idx").on(
+      table.ownerId,
+      table.provider,
+      table.modelId,
+      table.createdAt,
+    ),
+  ],
+);
+
+/**
+ * Materialized per-user model availability (KAN-46), written when a report
+ * finishes and read by the chat model picker. `last_ok_at` is the recency
+ * anchor (TTL via `AVAILABILITY_TTL_DAYS`).
+ */
+export const modelAvailability = sqliteTable(
+  "model_availability",
+  {
+    ownerId: text("owner_id").notNull(),
+    provider: text("provider").notNull(),
+    modelId: text("model_id").notNull(),
+    resolvedModel: text("resolved_model"),
+    available: integer("available", { mode: "boolean" }).notNull(),
+    lastStatus: integer("last_status"),
+    lastOkAt: text("last_ok_at"),
+    lastCheckedAt: text("last_checked_at").notNull(),
+    sourceRunId: text("source_run_id"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.ownerId, table.provider, table.modelId] }),
+    index("model_availability_owner_available_idx").on(
+      table.ownerId,
+      table.available,
+      table.provider,
     ),
   ],
 );

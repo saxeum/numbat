@@ -15,9 +15,11 @@ import { credentials } from "./api/routes/credentials";
 import { health } from "./api/routes/health";
 import { keys } from "./api/routes/keys";
 import { models } from "./api/routes/models";
+import { reports } from "./api/routes/reports";
 import type { AppEnv } from "./api/types";
 import { createAuth } from "./auth";
 import { validateEnv } from "./config";
+import { executeReport } from "./reports/execute";
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -41,6 +43,7 @@ export function createApp() {
   api.route("/health", health);
   api.route("/credentials", credentials);
   api.route("/models", models);
+  api.route("/reports", reports);
   api.route("/chat", chat);
   api.route("/conversations", conversations);
   api.route("/keys", keys);
@@ -65,4 +68,24 @@ const app = createApp();
 
 export default {
   fetch: app.fetch,
-} satisfies ExportedHandler<Env>;
+  // Probe reports run here rather than in the request path: a report lists and
+  // probes every model, which can exceed the response-lifetime waitUntil cap.
+  async queue(batch: MessageBatch<{ runId: string }>, env: Env) {
+    for (const message of batch.messages) {
+      try {
+        await executeReport(env, message.body.runId);
+        message.ack();
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            level: "error",
+            type: "report-consumer",
+            runId: message.body.runId,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        );
+        message.retry();
+      }
+    }
+  },
+} satisfies ExportedHandler<Env, { runId: string }>;

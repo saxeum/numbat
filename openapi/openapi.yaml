@@ -22,6 +22,8 @@ tags:
     description: BYOK provider credentials and routing
   - name: chat
     description: Persisted chat conversations and messages
+  - name: reports
+    description: BYOK probe reports and model availability
 paths:
   /health:
     get:
@@ -132,6 +134,134 @@ paths:
                 $ref: "#/components/schemas/ModelList"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List the caller's probe reports
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: The caller's reports, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Start a probe report for one of the caller's credentials
+      description: |
+        Probes every model the provider lists, using the caller's stored
+        (encrypted) credential. Returns `202` immediately; poll
+        `GET /reports/{id}` for progress and results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportRequest"
+      responses:
+        "202":
+          description: Report queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A report is already running for this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /reports/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ReportId"
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a report with its per-model results
+      responses:
+        "200":
+          description: The report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateReport
+      tags: [reports]
+      summary: Rename a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReportRequest"
+      responses:
+        "200":
+          description: Updated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete a report and its results
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/TooManyRequests"
         default:
@@ -516,6 +646,13 @@ components:
       schema:
         type: string
         minLength: 1
+    ReportId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
     ConversationId:
       name: id
       in: path
@@ -679,6 +816,149 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Model"
+    ReportTotals:
+      type: object
+      required:
+        [
+          models,
+          chat,
+          skipped,
+          passed,
+          failed,
+          withinQuota,
+          exhausted,
+          unavailable,
+          thinking,
+        ]
+      properties:
+        models: { type: integer }
+        chat: { type: integer }
+        skipped: { type: integer }
+        passed: { type: integer }
+        failed: { type: integer }
+        withinQuota: { type: integer }
+        exhausted: { type: integer }
+        unavailable: { type: integer }
+        thinking: { type: integer }
+    QuotaLimit:
+      type: object
+      properties:
+        metric: { type: [string, "null"] }
+        window: { type: [string, "null"] }
+        scope: { type: [string, "null"] }
+        limit: { type: [integer, "null"] }
+        remaining: { type: [integer, "null"] }
+        resetAfterMs: { type: [integer, "null"] }
+    QuotaInfo:
+      type: object
+      required: [state, limits]
+      properties:
+        state:
+          type: string
+          enum: [within-quota, exhausted, unavailable, unknown]
+        retryAfterMs: { type: [integer, "null"] }
+        limits:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuotaLimit"
+    ReportModel:
+      type: object
+      required: [id, modelId, kind, attempted, ok, quota]
+      properties:
+        id: { type: string }
+        modelId: { type: string }
+        resolvedModel: { type: [string, "null"] }
+        kind: { type: string }
+        attempted: { type: boolean }
+        ok: { type: boolean }
+        status: { type: [integer, "null"] }
+        statusText: { type: [string, "null"] }
+        durationMs: { type: [integer, "null"] }
+        ttftMs: { type: [integer, "null"] }
+        completionTokens: { type: [integer, "null"] }
+        reasoningTokens: { type: [integer, "null"] }
+        tps: { type: [number, "null"] }
+        thinking: { type: [boolean, "null"] }
+        content: { type: [string, "null"] }
+        error:
+          type: [object, "null"]
+          required: [name, message]
+          properties:
+            name: { type: [string, "null"] }
+            message: { type: [string, "null"] }
+        quota:
+          $ref: "#/components/schemas/QuotaInfo"
+        requestBody: { type: [string, "null"] }
+        body: { type: [string, "null"] }
+        headers:
+          type: [object, "null"]
+          additionalProperties: true
+    Report:
+      type: object
+      required:
+        [
+          id,
+          provider,
+          status,
+          trigger,
+          createdAt,
+          progressDone,
+          progressTotal,
+          totals,
+        ]
+      properties:
+        id: { type: string }
+        provider: { type: string }
+        label: { type: [string, "null"] }
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        trigger: { type: string }
+        createdAt: { type: string }
+        startedAt: { type: [string, "null"] }
+        finishedAt: { type: [string, "null"] }
+        durationMs: { type: [integer, "null"] }
+        progressDone: { type: integer }
+        progressTotal: { type: integer }
+        totals:
+          $ref: "#/components/schemas/ReportTotals"
+        error: { type: [string, "null"] }
+        models:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportModel"
+    ReportList:
+      type: object
+      required: [reports]
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+    ReportEnvelope:
+      type: object
+      required: [report]
+      properties:
+        report:
+          $ref: "#/components/schemas/Report"
+    CreateReportRequest:
+      type: object
+      required: [credentialId]
+      additionalProperties: false
+      properties:
+        credentialId:
+          type: string
+          minLength: 1
+        label:
+          type: [string, "null"]
+          maxLength: 120
+    UpdateReportRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        label:
+          type: [string, "null"]
+          maxLength: 120
     Conversation:
       type: object
       required: [id, title, model, createdAt, updatedAt]

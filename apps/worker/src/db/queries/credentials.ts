@@ -107,6 +107,60 @@ export async function getSealedCredential(
   return row;
 }
 
+/** The sealed material for one specific credential (by id), owner-scoped. */
+export async function getSealedCredentialById(
+  db: Database,
+  ownerId: string,
+  id: string,
+): Promise<SealedCredential | undefined> {
+  const [row] = await db
+    .select({
+      label: providerCredentials.label,
+      keyVersion: providerCredentials.keyVersion,
+      wrappedDek: providerCredentials.wrappedDek,
+      iv: providerCredentials.iv,
+      ciphertext: providerCredentials.ciphertext,
+    })
+    .from(providerCredentials)
+    .where(
+      and(
+        eq(providerCredentials.ownerId, ownerId),
+        eq(providerCredentials.id, id),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
+export interface CredentialMeta {
+  id: string;
+  provider: string;
+  label: string;
+}
+
+/** Provider + label for one credential (by id), owner-scoped. No key material. */
+export async function getCredentialMetaById(
+  db: Database,
+  ownerId: string,
+  id: string,
+): Promise<CredentialMeta | undefined> {
+  const [row] = await db
+    .select({
+      id: providerCredentials.id,
+      provider: providerCredentials.provider,
+      label: providerCredentials.label,
+    })
+    .from(providerCredentials)
+    .where(
+      and(
+        eq(providerCredentials.ownerId, ownerId),
+        eq(providerCredentials.id, id),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
 /** Crypto-shred: deleting the row deletes the wrapped DEK. */
 export async function deleteCredential(
   db: Database,

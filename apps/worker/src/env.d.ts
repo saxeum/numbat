@@ -40,4 +40,12 @@ interface Env {
   // --- Provider request/response tracing ---------------------------------
   /** "1" logs provider request/response traces (bodies truncated, key never). */
   GATEWAY_LLM_LOGGING?: string;
+
+  // --- BYOK probe reports (KAN-46) ---------------------------------------
+  /** Queue that executes user-triggered probe reports. */
+  PROBE_QUEUE?: Queue<{ runId: string }>;
+  /** Max models probed per report (default 200). */
+  REPORT_PROBE_LIMIT?: string;
+  /** Days a model stays "available" after its last successful probe (default 7). */
+  AVAILABILITY_TTL_DAYS?: string;
 }

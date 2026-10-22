@@ -60,6 +60,118 @@ export const ModelList = z
   .passthrough();
 export type ModelList = z.infer<typeof ModelList>;
 
+export const ReportTotals = z
+  .object({
+    models: z.number().int(),
+    chat: z.number().int(),
+    skipped: z.number().int(),
+    passed: z.number().int(),
+    failed: z.number().int(),
+    withinQuota: z.number().int(),
+    exhausted: z.number().int(),
+    unavailable: z.number().int(),
+    thinking: z.number().int(),
+  })
+  .passthrough();
+export type ReportTotals = z.infer<typeof ReportTotals>;
+
+export const QuotaLimit = z
+  .object({
+    metric: z.union([z.string(), z.null()]),
+    window: z.union([z.string(), z.null()]),
+    scope: z.union([z.string(), z.null()]),
+    limit: z.union([z.number(), z.null()]),
+    remaining: z.union([z.number(), z.null()]),
+    resetAfterMs: z.union([z.number(), z.null()]),
+  })
+  .partial()
+  .passthrough();
+export type QuotaLimit = z.infer<typeof QuotaLimit>;
+
+export const QuotaInfo = z
+  .object({
+    state: z.enum(["within-quota", "exhausted", "unavailable", "unknown"]),
+    retryAfterMs: z.union([z.number(), z.null()]).optional(),
+    limits: z.array(QuotaLimit),
+  })
+  .passthrough();
+export type QuotaInfo = z.infer<typeof QuotaInfo>;
+
+export const ReportModel = z
+  .object({
+    id: z.string(),
+    modelId: z.string(),
+    resolvedModel: z.union([z.string(), z.null()]).optional(),
+    kind: z.string(),
+    attempted: z.boolean(),
+    ok: z.boolean(),
+    status: z.union([z.number(), z.null()]).optional(),
+    statusText: z.union([z.string(), z.null()]).optional(),
+    durationMs: z.union([z.number(), z.null()]).optional(),
+    ttftMs: z.union([z.number(), z.null()]).optional(),
+    completionTokens: z.union([z.number(), z.null()]).optional(),
+    reasoningTokens: z.union([z.number(), z.null()]).optional(),
+    tps: z.union([z.number(), z.null()]).optional(),
+    thinking: z.union([z.boolean(), z.null()]).optional(),
+    content: z.union([z.string(), z.null()]).optional(),
+    error: z
+      .union([
+        z
+          .object({
+            name: z.union([z.string(), z.null()]),
+            message: z.union([z.string(), z.null()]),
+          })
+          .passthrough(),
+        z.null(),
+      ])
+      .optional(),
+    quota: QuotaInfo,
+    requestBody: z.union([z.string(), z.null()]).optional(),
+    body: z.union([z.string(), z.null()]).optional(),
+    headers: z
+      .union([z.object({}).partial().passthrough(), z.null()])
+      .optional(),
+  })
+  .passthrough();
+export type ReportModel = z.infer<typeof ReportModel>;
+
+export const Report = z
+  .object({
+    id: z.string(),
+    provider: z.string(),
+    label: z.union([z.string(), z.null()]).optional(),
+    status: z.enum(["queued", "running", "succeeded", "failed"]),
+    trigger: z.string(),
+    createdAt: z.string(),
+    startedAt: z.union([z.string(), z.null()]).optional(),
+    finishedAt: z.union([z.string(), z.null()]).optional(),
+    durationMs: z.union([z.number(), z.null()]).optional(),
+    progressDone: z.number().int(),
+    progressTotal: z.number().int(),
+    totals: ReportTotals,
+    error: z.union([z.string(), z.null()]).optional(),
+    models: z.array(ReportModel).optional(),
+  })
+  .passthrough();
+export type Report = z.infer<typeof Report>;
+
+export const ReportList = z.object({ reports: z.array(Report) }).passthrough();
+export type ReportList = z.infer<typeof ReportList>;
+
+export const CreateReportRequest = z.object({
+  credentialId: z.string().min(1),
+  label: z.union([z.string(), z.null()]).optional(),
+});
+export type CreateReportRequest = z.infer<typeof CreateReportRequest>;
+
+export const ReportEnvelope = z.object({ report: Report }).passthrough();
+export type ReportEnvelope = z.infer<typeof ReportEnvelope>;
+
+export const UpdateReportRequest = z
+  .object({ label: z.union([z.string(), z.null()]) })
+  .partial();
+export type UpdateReportRequest = z.infer<typeof UpdateReportRequest>;
+
 export const ApiKey = z
   .object({
     id: z.string(),
