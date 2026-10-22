@@ -1,7 +1,7 @@
 # numbat — BYOK probe reports + availability-driven chat
 
-- **Status:** In progress — phases 1–4 implemented (KAN-47/48/49/50); phases
-  5–7 remain
+- **Status:** In progress — phases 1–5 implemented (KAN-47…51); phases 6–7
+  remain
 - **Date:** 2026-10-22
 - **Ticket:** Jira **KAN** (epic + subtasks; see §11)
 - **Source:** `soper/manual-curl` — `src/domain/*`, `src/probe/*`,
@@ -265,7 +265,11 @@ programmatic `/v1` use.
 
 1. **Availability with no run yet:** strict (empty picker + CTA) or fall back to
    the global `free_models`? *Recommend fallback until the first report.*
+   **Resolved (KAN-51):** fallback to the global catalog until the user has any
+   `model_availability` rows; after that only fresh available models route.
 2. **Recency window:** latest run per provider, or a TTL (7 days)? *Recommend TTL.*
+   **Resolved (KAN-51):** TTL via `AVAILABILITY_TTL_DAYS` (default 7); reads use
+   `last_ok_at >= now - TTL`.
 3. **Provider scope v1:** confirm gemini/groq/nvidia/openrouter.
 4. **Evidence retention:** keep raw bodies 30/90 days, or summarize only?
 5. **Does `free_models` (global) stay** for the guide/status/gateway, or is it

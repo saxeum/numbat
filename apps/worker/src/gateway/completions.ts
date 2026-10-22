@@ -2,6 +2,8 @@ import { openSecret } from "../crypto/vault";
 import type { Database } from "../db/client";
 import { getSealedCredential } from "../db/queries/credentials";
 import { listFreeModels } from "../db/queries/models";
+import { getAvailableModel, ownerHasAvailability } from "../db/queries/reports";
+import { availabilitySince } from "../reports/availability";
 import { AppError } from "../api/middleware/error";
 import {
   fromGeminiResponse,
@@ -65,6 +67,57 @@ function upstreamRequestId(upstream: Response): string | null {
   return upstream.headers.get("x-request-id") ?? upstream.headers.get("cf-ray");
 }
 
+function requireProvider(provider: string): ProviderId {
+  if (!isProviderId(provider)) {
+    throw new AppError(
+      501,
+      "UNSUPPORTED_PROVIDER",
+      `Provider \`${provider}\` is not supported`,
+    );
+  }
+  return provider;
+}
+
+/**
+ * Resolves the provider for a bare model id from the caller's availability.
+ * The global catalog is only a fallback for users who have never run a report;
+ * once a user has availability rows, models outside it are rejected.
+ */
+async function resolveProvider(
+  env: Env,
+  db: Database,
+  ownerId: string,
+  model: string,
+): Promise<ProviderId> {
+  const available = await getAvailableModel(
+    db,
+    ownerId,
+    model,
+    availabilitySince(env),
+  );
+  if (available) {
+    return requireProvider(available.provider);
+  }
+
+  if (await ownerHasAvailability(db, ownerId)) {
+    throw new AppError(
+      404,
+      "MODEL_NOT_AVAILABLE",
+      `Model \`${model}\` is not available for your account; run a report to check your keys`,
+    );
+  }
+
+  const match = (await listFreeModels(db)).find((m) => m.modelId === model);
+  if (!match) {
+    throw new AppError(
+      404,
+      "MODEL_NOT_FOUND",
+      `Model \`${model}\` is not in the catalog`,
+    );
+  }
+  return requireProvider(match.provider);
+}
+
 /**
  * Resolves the provider, decrypts the caller's credential, and calls the
  * upstream chat API. Shared by the stateless `/chat/completions` proxy and the
@@ -80,31 +133,9 @@ export async function prepareCompletion(
 
   let provider: ProviderId;
   if (providerHint) {
-    if (!isProviderId(providerHint)) {
-      throw new AppError(
-        501,
-        "UNSUPPORTED_PROVIDER",
-        `Provider \`${providerHint}\` is not supported`,
-      );
-    }
-    provider = providerHint;
+    provider = requireProvider(providerHint);
   } else {
-    const match = (await listFreeModels(db)).find((m) => m.modelId === model);
-    if (!match) {
-      throw new AppError(
-        404,
-        "MODEL_NOT_FOUND",
-        `Model \`${model}\` is not in the catalog`,
-      );
-    }
-    if (!isProviderId(match.provider)) {
-      throw new AppError(
-        501,
-        "UNSUPPORTED_PROVIDER",
-        `Provider \`${match.provider}\` is not supported`,
-      );
-    }
-    provider = match.provider;
+    provider = await resolveProvider(env, db, ownerId, model);
   }
 
   if (!env.BYOK_KEK) {

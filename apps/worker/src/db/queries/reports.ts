@@ -301,6 +301,42 @@ export function listAvailableModels(
     .orderBy(asc(modelAvailability.provider), asc(modelAvailability.modelId));
 }
 
+/** Whether the user has ever produced availability rows (i.e. run a report). */
+export async function ownerHasAvailability(
+  db: Database,
+  ownerId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ ownerId: modelAvailability.ownerId })
+    .from(modelAvailability)
+    .where(eq(modelAvailability.ownerId, ownerId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** A single fresh, available model for a user (most recent probe first). */
+export function getAvailableModel(
+  db: Database,
+  ownerId: string,
+  modelId: string,
+  sinceIso: string,
+): Promise<AvailabilityRow | null> {
+  return db
+    .select()
+    .from(modelAvailability)
+    .where(
+      and(
+        eq(modelAvailability.ownerId, ownerId),
+        eq(modelAvailability.modelId, modelId),
+        eq(modelAvailability.available, true),
+        gte(modelAvailability.lastOkAt, sinceIso),
+      ),
+    )
+    .orderBy(desc(modelAvailability.lastOkAt))
+    .get()
+    .then((row) => row ?? null);
+}
+
 /** Every availability row for a user (available or not) — for the picker UI. */
 export function listAvailability(
   db: Database,

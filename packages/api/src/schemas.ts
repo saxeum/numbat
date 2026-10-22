@@ -51,6 +51,8 @@ export const Model = z
     "x-provider": z.enum(["gemini", "groq", "nvidia", "openrouter"]),
     "x-context": z.number().int().optional(),
     "x-free": z.boolean(),
+    "x-available": z.boolean().optional(),
+    "x-last-checked": z.string().optional(),
   })
   .passthrough();
 export type Model = z.infer<typeof Model>;
