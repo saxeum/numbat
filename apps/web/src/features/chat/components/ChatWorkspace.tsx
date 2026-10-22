@@ -41,7 +41,8 @@ export function ChatWorkspace() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
   const createConversation = useCreateConversation();
   const truncate = useTruncateFromMessage();
-  const { streaming, liveText, liveMetrics, send, cancel } = useChatStream();
+  const { streaming, liveText, liveReasoning, liveMetrics, send, cancel } =
+    useChatStream();
 
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -191,6 +192,7 @@ export function ChatWorkspace() {
             messages={messages}
             streaming={streaming}
             liveText={liveText}
+            liveReasoning={liveReasoning}
             liveMetrics={liveMetrics}
             onRegenerate={onRegenerate}
             onEdit={onEdit}

@@ -89,6 +89,7 @@ export interface CompleteConversationInput {
   provider?: string;
   stream?: boolean;
   onToken?: (delta: string) => void;
+  onReasoning?: (delta: string) => void;
   signal?: AbortSignal;
 }
 
@@ -100,13 +101,14 @@ export async function completeConversation(
   conversationId: string,
   input: CompleteConversationInput,
 ): Promise<ChatOutcome> {
-  const { onToken, signal, ...body } = input;
+  const { onToken, onReasoning, signal, ...body } = input;
   return postChat({
     url: `/api/conversations/${conversationId}/completions`,
     body,
     model: input.model,
     stream: input.stream,
     onToken,
+    onReasoning,
     signal,
   });
 }

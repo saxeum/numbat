@@ -130,6 +130,8 @@ conversations.post(
       promptTokens: body.promptTokens ?? null,
       completionTokens: body.completionTokens ?? null,
       reasoningTokens: body.reasoningTokens ?? null,
+      reasoning: body.reasoning ?? null,
+      reasoningMs: body.reasoningMs ?? null,
       ttftMs: body.ttftMs ?? null,
       totalMs: body.totalMs ?? null,
       stopped: body.stopped ?? false,
@@ -175,6 +177,8 @@ conversations.post(
         promptTokens: null,
         completionTokens: null,
         reasoningTokens: null,
+        reasoning: null,
+        reasoningMs: null,
         ttftMs: null,
         totalMs: null,
         stopped: false,
@@ -210,6 +214,8 @@ conversations.post(
       content: string;
       model: string;
       usage: TokenUsage | null;
+      reasoning: string;
+      reasoningMs: number | null;
       ttftMs: number | null;
       totalMs: number;
     }) => {
@@ -225,6 +231,8 @@ conversations.post(
         promptTokens: result.usage?.prompt ?? null,
         completionTokens: result.usage?.completion ?? null,
         reasoningTokens: result.usage?.reasoning ?? null,
+        reasoning: result.reasoning || null,
+        reasoningMs: result.reasoningMs,
         ttftMs: result.ttftMs,
         totalMs: result.totalMs,
         stopped: false,

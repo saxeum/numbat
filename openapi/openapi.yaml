@@ -1017,6 +1017,10 @@ components:
           type: [integer, "null"]
         reasoningTokens:
           type: [integer, "null"]
+        reasoning:
+          type: [string, "null"]
+        reasoningMs:
+          type: [integer, "null"]
         ttftMs:
           type: [integer, "null"]
         totalMs:
@@ -1090,6 +1094,11 @@ components:
           type: integer
           minimum: 0
         reasoningTokens:
+          type: integer
+          minimum: 0
+        reasoning:
+          type: string
+        reasoningMs:
           type: integer
           minimum: 0
         ttftMs:

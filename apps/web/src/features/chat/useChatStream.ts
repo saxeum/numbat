@@ -17,34 +17,54 @@ interface SendInput {
   stream: boolean;
 }
 
+export interface LiveMetrics {
+  ttftMs: number | null;
+  tokens: number;
+  /** How long the model thought before the answer started (ms). */
+  reasoningMs: number | null;
+}
+
 /**
- * Owns the in-flight completion: live streamed text + metrics, plus cancel.
- * The turn is persisted server-side (KAN-42); this hook only renders the stream.
+ * Owns the in-flight completion: live streamed text + extended thinking +
+ * metrics, plus cancel. The turn is persisted server-side (KAN-42); this hook
+ * only renders the stream.
  */
 export function useChatStream() {
   const [streaming, setStreaming] = useState(false);
   const [liveText, setLiveText] = useState("");
-  const [liveMetrics, setLiveMetrics] = useState<{
-    ttftMs: number | null;
-    tokens: number;
-  }>({ ttftMs: null, tokens: 0 });
+  const [liveReasoning, setLiveReasoning] = useState("");
+  const [liveMetrics, setLiveMetrics] = useState<LiveMetrics>({
+    ttftMs: null,
+    tokens: 0,
+    reasoningMs: null,
+  });
 
   const abortRef = useRef<AbortController | null>(null);
   const textRef = useRef("");
-  const metricsRef = useRef({ ttftMs: null as number | null, tokens: 0 });
+  const reasoningRef = useRef("");
+  const reasoningStartedRef = useRef<number | null>(null);
+  const metricsRef = useRef<LiveMetrics>({
+    ttftMs: null,
+    tokens: 0,
+    reasoningMs: null,
+  });
   const rafRef = useRef<number | null>(null);
 
   const flush = useCallback(() => {
     rafRef.current = null;
     setLiveText(textRef.current);
+    setLiveReasoning(reasoningRef.current);
   }, []);
 
   const send = useCallback(
     async (input: SendInput): Promise<SendResult> => {
       textRef.current = "";
-      metricsRef.current = { ttftMs: null, tokens: 0 };
+      reasoningRef.current = "";
+      reasoningStartedRef.current = null;
+      metricsRef.current = { ttftMs: null, tokens: 0, reasoningMs: null };
       setLiveText("");
-      setLiveMetrics({ ttftMs: null, tokens: 0 });
+      setLiveReasoning("");
+      setLiveMetrics({ ttftMs: null, tokens: 0, reasoningMs: null });
       setStreaming(true);
 
       const controller = new AbortController();
@@ -58,13 +78,35 @@ export function useChatStream() {
           regenerate: input.regenerate,
           stream: input.stream,
           signal: controller.signal,
+          onReasoning: input.stream
+            ? (delta) => {
+                if (reasoningStartedRef.current === null) {
+                  reasoningStartedRef.current = performance.now() - started;
+                }
+                reasoningRef.current += delta;
+                if (rafRef.current === null) {
+                  rafRef.current = requestAnimationFrame(flush);
+                }
+              }
+            : undefined,
           onToken: input.stream
             ? (delta) => {
                 textRef.current += delta;
                 const m = metricsRef.current;
-                if (m.ttftMs === null) m.ttftMs = performance.now() - started;
+                const now = performance.now() - started;
+                if (m.ttftMs === null) m.ttftMs = now;
+                if (
+                  m.reasoningMs === null &&
+                  reasoningStartedRef.current !== null
+                ) {
+                  m.reasoningMs = now - reasoningStartedRef.current;
+                }
                 m.tokens += 1;
-                setLiveMetrics({ ttftMs: m.ttftMs, tokens: m.tokens });
+                setLiveMetrics({
+                  ttftMs: m.ttftMs,
+                  tokens: m.tokens,
+                  reasoningMs: m.reasoningMs,
+                });
                 if (rafRef.current === null) {
                   rafRef.current = requestAnimationFrame(flush);
                 }
@@ -90,6 +132,8 @@ export function useChatStream() {
             tps:
               m.tokens > 0 && totalMs > 0 ? m.tokens / (totalMs / 1000) : null,
             usage: null,
+            reasoning: reasoningRef.current,
+            reasoningMs: m.reasoningMs,
             stopped: true,
           };
         }
@@ -100,6 +144,7 @@ export function useChatStream() {
           rafRef.current = null;
         }
         setLiveText(textRef.current);
+        setLiveReasoning(reasoningRef.current);
         setStreaming(false);
         abortRef.current = null;
       }
@@ -111,5 +156,5 @@ export function useChatStream() {
     abortRef.current?.abort();
   }, []);
 
-  return { streaming, liveText, liveMetrics, send, cancel };
+  return { streaming, liveText, liveReasoning, liveMetrics, send, cancel };
 }

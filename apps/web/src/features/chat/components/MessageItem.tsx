@@ -4,6 +4,7 @@ import { Check, Copy, Pencil, RefreshCw } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ThinkingBlock } from "@/features/chat/components/ThinkingBlock";
 import type { Message } from "@numbat/api";
 
 // Keep react-markdown + highlight.js out of the initial bundle.
@@ -130,11 +131,21 @@ export function MessageItem({
   }
 
   const metrics = usageSummary(message);
+  // While the answer is still empty the model is (still) thinking.
+  const thinking =
+    Boolean(streaming) && !message.content && Boolean(message.reasoning);
 
   return (
     <div className="flex gap-3">
       <BrandMark className="mt-0.5 size-5" />
       <div className="min-w-0 flex-1">
+        {message.reasoning ? (
+          <ThinkingBlock
+            reasoning={message.reasoning}
+            thinking={thinking}
+            durationMs={message.reasoningMs}
+          />
+        ) : null}
         {!message.content ? (
           <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-muted-foreground">
             {message.stopped ? "(stopped)" : "…"}

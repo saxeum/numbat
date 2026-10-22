@@ -97,6 +97,10 @@ export interface ChatOutcome {
   tps: number | null;
   /** Exact provider token usage, when reported. */
   usage: TokenUsage | null;
+  /** Extended-thinking text (Gemini thoughts / OpenAI `reasoning_content`). */
+  reasoning: string;
+  /** How long the model thought before the answer started (ms); null if unknown. */
+  reasoningMs: number | null;
   /** Older messages omitted to fit the context window (server-orchestrated). */
   trimmed?: number;
 }
@@ -133,6 +137,8 @@ export interface ChatInput {
   stream?: boolean;
   /** Called with each content delta while streaming. */
   onToken?: (delta: string) => void;
+  /** Called with each extended-thinking delta while streaming. */
+  onReasoning?: (delta: string) => void;
   /** Abort the in-flight request. */
   signal?: AbortSignal;
 }
@@ -145,6 +151,7 @@ export interface ChatRequest {
   model: string;
   stream?: boolean;
   onToken?: (delta: string) => void;
+  onReasoning?: (delta: string) => void;
   signal?: AbortSignal;
 }
 
@@ -170,19 +177,27 @@ export async function postChat(input: ChatRequest): Promise<ChatOutcome> {
   const trimmed = trimmedHeader ? Number(trimmedHeader) : undefined;
 
   const outcome = input.stream
-    ? await readStream(res, input.model, provider, input.onToken, started)
+    ? await readStream(
+        res,
+        input.model,
+        provider,
+        input.onToken,
+        input.onReasoning,
+        started,
+      )
     : await readJson(res, input.model, provider, started);
 
   return trimmed !== undefined ? { ...outcome, trimmed } : outcome;
 }
 
 export async function chat(input: ChatInput): Promise<ChatOutcome> {
-  const { onToken, signal, ...body } = input;
+  const { onToken, onReasoning, signal, ...body } = input;
   return postChat({
     body,
     model: input.model,
     stream: input.stream,
     onToken,
+    onReasoning,
     signal,
   });
 }
@@ -196,13 +211,14 @@ async function readJson(
   const json = (await res.json()) as {
     model?: string;
     usage?: unknown;
-    choices?: { message?: { content?: string } }[];
+    choices?: { message?: { content?: string; reasoning_content?: string } }[];
   };
   const usage = parseUsage(json.usage);
   const totalMs = performance.now() - started;
   const tokens = usage?.completion ?? null;
+  const message = json.choices?.[0]?.message;
   return {
-    content: json.choices?.[0]?.message?.content ?? "",
+    content: message?.content ?? "",
     provider,
     model: json.model ?? fallbackModel,
     ttftMs: null,
@@ -210,6 +226,8 @@ async function readJson(
     tokens,
     tps: rate(tokens, totalMs),
     usage,
+    reasoning: message?.reasoning_content ?? "",
+    reasoningMs: null,
   };
 }
 
@@ -219,17 +237,21 @@ async function readStream(
   fallbackModel: string,
   provider: string | null,
   onToken: ((delta: string) => void) | undefined,
+  onReasoning: ((delta: string) => void) | undefined,
   started: number,
 ): Promise<ChatOutcome> {
   const reader = res.body?.getReader();
   if (!reader) {
     const json = (await res.json()) as {
       model?: string;
-      choices?: { message?: { content?: string } }[];
+      choices?: {
+        message?: { content?: string; reasoning_content?: string };
+      }[];
     };
     const totalMs = performance.now() - started;
+    const message = json.choices?.[0]?.message;
     return {
-      content: json.choices?.[0]?.message?.content ?? "",
+      content: message?.content ?? "",
       provider,
       model: json.model ?? fallbackModel,
       ttftMs: null,
@@ -237,14 +259,19 @@ async function readStream(
       tokens: null,
       tps: null,
       usage: null,
+      reasoning: message?.reasoning_content ?? "",
+      reasoningMs: null,
     };
   }
 
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
+  let reasoning = "";
   let model = fallbackModel;
   let ttftMs: number | null = null;
+  let reasoningStartedMs: number | null = null;
+  let reasoningMs: number | null = null;
   let lastTokenMs = 0;
   let tokenEvents = 0;
   let usage: TokenUsage | null = null;
@@ -265,22 +292,40 @@ async function readStream(
         const chunk = JSON.parse(payload) as {
           model?: string;
           usage?: unknown;
-          choices?: { delta?: { content?: string; reasoning?: string } }[];
+          choices?: {
+            delta?: {
+              content?: string;
+              reasoning?: string;
+              reasoning_content?: string;
+            };
+          }[];
         };
         if (chunk.model) model = chunk.model;
         if (chunk.usage) usage = parseUsage(chunk.usage);
         const delta = chunk.choices?.[0]?.delta;
         const contentDelta =
           typeof delta?.content === "string" ? delta.content : "";
-        // Reasoning tokens still take time; count them for TTFT/TPS.
         const reasoningDelta =
-          typeof delta?.reasoning === "string" ? delta.reasoning : "";
+          typeof delta?.reasoning_content === "string"
+            ? delta.reasoning_content
+            : typeof delta?.reasoning === "string"
+              ? delta.reasoning
+              : "";
+        // Reasoning tokens still take time; count them for TTFT/TPS.
         if (contentDelta || reasoningDelta) {
           const now = performance.now() - started;
           if (ttftMs === null) ttftMs = now;
           lastTokenMs = now;
           tokenEvents += 1;
+          if (reasoningDelta) {
+            if (reasoningStartedMs === null) reasoningStartedMs = now;
+            reasoning += reasoningDelta;
+            onReasoning?.(reasoningDelta);
+          }
           if (contentDelta) {
+            if (reasoningMs === null && reasoningStartedMs !== null) {
+              reasoningMs = now - reasoningStartedMs;
+            }
             content += contentDelta;
             onToken?.(contentDelta);
           }
@@ -306,5 +351,7 @@ async function readStream(
     tokens,
     tps: rate(tokens, denomMs),
     usage,
+    reasoning,
+    reasoningMs,
   };
 }

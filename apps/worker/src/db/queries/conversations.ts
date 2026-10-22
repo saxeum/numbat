@@ -22,6 +22,8 @@ export interface MessageRow {
   promptTokens: number | null;
   completionTokens: number | null;
   reasoningTokens: number | null;
+  reasoning: string | null;
+  reasoningMs: number | null;
   ttftMs: number | null;
   totalMs: number | null;
   stopped: boolean;
@@ -47,6 +49,8 @@ const messageColumns = {
   promptTokens: messages.promptTokens,
   completionTokens: messages.completionTokens,
   reasoningTokens: messages.reasoningTokens,
+  reasoning: messages.reasoning,
+  reasoningMs: messages.reasoningMs,
   ttftMs: messages.ttftMs,
   totalMs: messages.totalMs,
   stopped: messages.stopped,
@@ -120,6 +124,8 @@ export interface CreateMessageValues {
   promptTokens: number | null;
   completionTokens: number | null;
   reasoningTokens: number | null;
+  reasoning: string | null;
+  reasoningMs: number | null;
   ttftMs: number | null;
   totalMs: number | null;
   stopped: boolean;

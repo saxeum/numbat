@@ -14,6 +14,8 @@ export interface ChatMessage {
   name?: string;
   tool_call_id?: string;
   tool_calls?: unknown[];
+  /** OpenAI-style extended-thinking text (reasoning models / Gemini thoughts). */
+  reasoning_content?: string;
 }
 
 export interface ChatCompletionRequest {
@@ -57,7 +59,10 @@ export interface ChatCompletionChunk {
   model: string;
   choices: {
     index: number;
-    delta: Partial<ChatMessage> & { content?: string | null };
+    delta: Partial<ChatMessage> & {
+      content?: string | null;
+      reasoning_content?: string;
+    };
     finish_reason: string | null;
   }[];
   [key: string]: unknown;

@@ -73,11 +73,32 @@ export function mapGeminiFinish(reason: unknown): string | null {
   }
 }
 
-function geminiText(candidate: unknown): string {
+interface GeminiPart extends Json {
+  text?: string;
+  /** Gemini marks extended-thinking parts with `thought: true`. */
+  thought?: boolean;
+}
+
+function geminiParts(candidate: unknown): GeminiPart[] {
   const content = (candidate as Json | undefined)?.content as Json | undefined;
   const parts = content?.parts as Json[] | undefined;
-  if (!Array.isArray(parts)) return "";
-  return parts.map((p) => (typeof p.text === "string" ? p.text : "")).join("");
+  return Array.isArray(parts) ? (parts as GeminiPart[]) : [];
+}
+
+/** Visible answer text: candidate parts not marked as thinking. */
+function geminiText(candidate: unknown): string {
+  return geminiParts(candidate)
+    .filter((p) => p.thought !== true)
+    .map((p) => (typeof p.text === "string" ? p.text : ""))
+    .join("");
+}
+
+/** Extended-thinking text: candidate parts marked `thought: true`. */
+function geminiThought(candidate: unknown): string {
+  return geminiParts(candidate)
+    .filter((p) => p.thought === true)
+    .map((p) => (typeof p.text === "string" ? p.text : ""))
+    .join("");
 }
 
 interface UsageWithReasoning extends Usage {
@@ -104,6 +125,8 @@ export function fromGeminiResponse(json: Json, model: string): ChatCompletion {
   const candidates = (json.candidates as Json[] | undefined) ?? [];
   const first = candidates[0];
   const usage = geminiUsage(json.usageMetadata as Json | undefined);
+  const answer = geminiText(first);
+  const thought = geminiThought(first);
 
   return {
     id: newCompletionId(),
@@ -113,7 +136,11 @@ export function fromGeminiResponse(json: Json, model: string): ChatCompletion {
     choices: [
       {
         index: 0,
-        message: { role: "assistant", content: geminiText(first) },
+        message: {
+          role: "assistant",
+          content: answer,
+          ...(thought ? { reasoning_content: thought } : {}),
+        },
         finish_reason: mapGeminiFinish(first?.finishReason),
       },
     ],
@@ -125,9 +152,10 @@ function chunk(
   id: string,
   created: number,
   model: string,
-  content: string,
+  delta: { content?: string; reasoning_content?: string },
   finishReason: string | null,
 ): ChatCompletionChunk {
+  const hasDelta = Boolean(delta.content || delta.reasoning_content);
   return {
     id,
     object: "chat.completion.chunk",
@@ -136,7 +164,7 @@ function chunk(
     choices: [
       {
         index: 0,
-        delta: content ? { content } : {},
+        delta: hasDelta ? delta : {},
         finish_reason: finishReason,
       },
     ],
@@ -194,7 +222,7 @@ export function geminiStreamToOpenAI(
         if (done) {
           if (!finished) {
             controller.enqueue(
-              emit(JSON.stringify(chunk(id, created, model, "", "stop"))),
+              emit(JSON.stringify(chunk(id, created, model, {}, "stop"))),
             );
           }
           emitUsage(controller);
@@ -218,10 +246,31 @@ export function geminiStreamToOpenAI(
           }
           if (json.usageMetadata) usageMeta = json.usageMetadata as Json;
           const first = ((json.candidates as Json[] | undefined) ?? [])[0];
+          const thought = geminiThought(first);
+          if (thought) {
+            controller.enqueue(
+              emit(
+                JSON.stringify(
+                  chunk(
+                    id,
+                    created,
+                    model,
+                    { reasoning_content: thought },
+                    null,
+                  ),
+                ),
+              ),
+            );
+            enqueued = true;
+          }
           const text = geminiText(first);
           if (text) {
             controller.enqueue(
-              emit(JSON.stringify(chunk(id, created, model, text, null))),
+              emit(
+                JSON.stringify(
+                  chunk(id, created, model, { content: text }, null),
+                ),
+              ),
             );
             enqueued = true;
           }
@@ -229,7 +278,7 @@ export function geminiStreamToOpenAI(
           if (finish) {
             finished = true;
             controller.enqueue(
-              emit(JSON.stringify(chunk(id, created, model, "", finish))),
+              emit(JSON.stringify(chunk(id, created, model, {}, finish))),
             );
             enqueued = true;
             emitUsage(controller);

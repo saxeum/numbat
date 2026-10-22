@@ -336,6 +336,10 @@ export interface AccumulatedCompletion {
   usage: TokenUsage | null;
   /** Time to first content token (ms); null for non-streamed replies. */
   ttftMs: number | null;
+  /** Extended-thinking text (Gemini thoughts / OpenAI `reasoning_content`). */
+  reasoning: string;
+  /** How long the model thought before the answer started (ms); null if unknown. */
+  reasoningMs: number | null;
 }
 
 function parseUsage(raw: unknown): TokenUsage | null {
@@ -367,6 +371,9 @@ export function createSseAccumulator(startedAt: number) {
   let model = "";
   let usage: TokenUsage | null = null;
   let ttftMs: number | null = null;
+  let reasoning = "";
+  let reasoningStartedAt: number | null = null;
+  let reasoningMs: number | null = null;
 
   return {
     push(chunk: Uint8Array) {
@@ -382,14 +389,35 @@ export function createSseAccumulator(startedAt: number) {
           const json = JSON.parse(payload) as {
             model?: string;
             usage?: unknown;
-            choices?: { delta?: { content?: string } }[];
+            choices?: {
+              delta?: {
+                content?: string;
+                reasoning_content?: string;
+                reasoning?: string;
+              };
+            }[];
           };
           if (typeof json.model === "string") model = json.model;
           if (json.usage) usage = parseUsage(json.usage);
-          const delta = json.choices?.[0]?.delta?.content;
-          if (typeof delta === "string" && delta.length > 0) {
-            if (ttftMs === null) ttftMs = Date.now() - startedAt;
-            content += delta;
+          const delta = json.choices?.[0]?.delta;
+          const reasoningDelta =
+            typeof delta?.reasoning_content === "string"
+              ? delta.reasoning_content
+              : typeof delta?.reasoning === "string"
+                ? delta.reasoning
+                : "";
+          if (reasoningDelta) {
+            if (reasoningStartedAt === null) reasoningStartedAt = Date.now();
+            reasoning += reasoningDelta;
+          }
+          const contentDelta = delta?.content;
+          if (typeof contentDelta === "string" && contentDelta.length > 0) {
+            const now = Date.now();
+            if (ttftMs === null) ttftMs = now - startedAt;
+            if (reasoningMs === null && reasoningStartedAt !== null) {
+              reasoningMs = now - reasoningStartedAt;
+            }
+            content += contentDelta;
           }
         } catch {
           // ignore malformed SSE line
@@ -397,7 +425,16 @@ export function createSseAccumulator(startedAt: number) {
       }
     },
     result(): AccumulatedCompletion {
-      return { content, model, usage, ttftMs };
+      const finalReasoningMs =
+        reasoningMs ?? (reasoning ? Date.now() - startedAt : null);
+      return {
+        content,
+        model,
+        usage,
+        ttftMs,
+        reasoning,
+        reasoningMs: finalReasoningMs,
+      };
     },
   };
 }
@@ -407,13 +444,17 @@ export function extractCompletion(json: unknown): AccumulatedCompletion {
   const body = (json ?? {}) as {
     model?: string;
     usage?: unknown;
-    choices?: { message?: { content?: string } }[];
+    choices?: {
+      message?: { content?: string; reasoning_content?: string };
+    }[];
   };
   return {
     content: body.choices?.[0]?.message?.content ?? "",
     model: typeof body.model === "string" ? body.model : "",
     usage: parseUsage(body.usage),
     ttftMs: null,
+    reasoning: body.choices?.[0]?.message?.reasoning_content ?? "",
+    reasoningMs: null,
   };
 }
 

@@ -3,12 +3,14 @@ import { ArrowDown } from "lucide-react";
 
 import type { Message } from "@numbat/api";
 import { MessageItem } from "@/features/chat/components/MessageItem";
+import type { LiveMetrics } from "@/features/chat/useChatStream";
 
 interface Props {
   messages: Message[];
   streaming: boolean;
   liveText: string;
-  liveMetrics: { ttftMs: number | null; tokens: number };
+  liveReasoning: string;
+  liveMetrics: LiveMetrics;
   onRegenerate: (message: Message) => void;
   onEdit: (message: Message, content: string) => void;
 }
@@ -17,6 +19,7 @@ export function MessageList({
   messages,
   streaming,
   liveText,
+  liveReasoning,
   liveMetrics,
   onRegenerate,
   onEdit,
@@ -51,7 +54,7 @@ export function MessageList({
   useEffect(() => {
     const el = scrollRef.current;
     if (el && stickRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages, liveText, streaming]);
+  }, [messages, liveText, liveReasoning, streaming]);
 
   const lastAssistantId = [...messages]
     .reverse()
@@ -62,6 +65,8 @@ export function MessageList({
     conversationId: "",
     role: "assistant",
     content: liveText,
+    reasoning: liveReasoning,
+    reasoningMs: liveMetrics.reasoningMs,
     completionTokens: liveMetrics.tokens || null,
     ttftMs: liveMetrics.ttftMs,
     stopped: false,

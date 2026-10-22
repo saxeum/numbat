@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { trimHistory } from "../src/gateway/completions";
+import { createSseAccumulator, trimHistory } from "../src/gateway/completions";
 
 const convBase = "https://foonix.net/api/conversations";
 const authBase = "https://foonix.net/api/auth";
@@ -81,6 +81,8 @@ interface Detail {
     promptTokens: number | null;
     ttftMs: number | null;
     totalMs: number | null;
+    reasoning: string | null;
+    reasoningMs: number | null;
   }[];
 }
 
@@ -176,6 +178,39 @@ describe("conversation completions (server-orchestrated)", () => {
     expect(conversation.messages[1]?.totalMs).not.toBeNull();
   });
 
+  it("persists extended thinking from a streamed reply", async () => {
+    const cookie = await signUp("cc-thinking@example.com");
+    const sse = [
+      `data: ${JSON.stringify({ model, choices: [{ index: 0, delta: { reasoning_content: "Let me think" } }] })}`,
+      `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "Pong" } }] })}`,
+      `data: ${JSON.stringify({ choices: [{ index: 0, delta: {} }], usage: { prompt_tokens: 10, completion_tokens: 2 } })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n");
+    stubUpstream({
+      groq: () =>
+        new Response(sse, {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        }),
+    });
+    await connect(cookie);
+    const id = await createConversation(cookie);
+
+    const res = await SELF.fetch(`${convBase}/${id}/completions`, {
+      method: "POST",
+      headers: authed(cookie),
+      body: JSON.stringify({ model, content: "ping", stream: true }),
+    });
+    expect(res.status).toBe(200);
+    await res.text();
+
+    const conversation = await detail(cookie, id);
+    expect(conversation.messages[1]?.content).toBe("Pong");
+    expect(conversation.messages[1]?.reasoning).toBe("Let me think");
+    expect(conversation.messages[1]?.reasoningMs).not.toBeNull();
+  });
+
   it("regenerates without appending a new user turn", async () => {
     const cookie = await signUp("cc-regen@example.com");
     stubUpstream({ groq: () => completionResponse("Pong") });
@@ -236,6 +271,24 @@ describe("conversation completions (server-orchestrated)", () => {
       body: JSON.stringify({ model, content: "hi", stream: false }),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("createSseAccumulator", () => {
+  it("captures reasoning text and thinking duration", () => {
+    const acc = createSseAccumulator(Date.now() - 100);
+    const encode = (payload: unknown) =>
+      new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`);
+
+    acc.push(encode({ choices: [{ delta: { reasoning_content: "hmm " } }] }));
+    acc.push(encode({ choices: [{ delta: { reasoning: "ok" } }] }));
+    acc.push(encode({ choices: [{ delta: { content: "Hi" } }] }));
+
+    const result = acc.result();
+    expect(result.content).toBe("Hi");
+    expect(result.reasoning).toBe("hmm ok");
+    expect(result.reasoningMs).not.toBeNull();
+    expect(result.reasoningMs!).toBeGreaterThanOrEqual(0);
   });
 });
 

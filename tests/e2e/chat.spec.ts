@@ -36,6 +36,8 @@ interface MockMessage {
   completionTokens: number | null;
   ttftMs: number | null;
   totalMs: number | null;
+  reasoning?: string | null;
+  reasoningMs?: number | null;
   stopped: boolean;
   createdAt: string;
 }
@@ -54,11 +56,20 @@ interface MockConversation {
  * Stateful in-memory mock of the conversations API. The KAN-42 client delegates
  * persistence to the server, so the mock stores turns itself (no double-write).
  */
-async function mockGateway(page: Page, reply: string = DEFAULT_REPLY) {
+async function mockGateway(
+  page: Page,
+  reply: string = DEFAULT_REPLY,
+  thinking?: { reasoning: string; reasoningMs?: number },
+) {
   let seq = 0;
   const uid = () => `id-${++seq}`;
   const store = new Map<string, MockConversation>();
   const sse = [
+    ...(thinking
+      ? [
+          `data: ${JSON.stringify({ model: "openai/gpt-oss-120b", choices: [{ index: 0, delta: { reasoning_content: thinking.reasoning } }] })}`,
+        ]
+      : []),
     `data: ${JSON.stringify({ model: "openai/gpt-oss-120b", choices: [{ index: 0, delta: { content: reply } }] })}`,
     `data: ${JSON.stringify({ choices: [{ index: 0, delta: {} }], usage: { prompt_tokens: 12, completion_tokens: 7 } })}`,
     "data: [DONE]",
@@ -203,6 +214,12 @@ async function mockGateway(page: Page, reply: string = DEFAULT_REPLY) {
         completionTokens: 7,
         ttftMs: 30,
         totalMs: 120,
+        ...(thinking
+          ? {
+              reasoning: thinking.reasoning,
+              reasoningMs: thinking.reasoningMs ?? 4000,
+            }
+          : {}),
         stopped: false,
         createdAt: now(),
       });
@@ -264,6 +281,40 @@ test("chat: send a message, stream a reply, and persist the conversation", async
   await expect(page.getByText("ready when you are.")).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test("chat: shows and persists the thinking block", async ({ page }) => {
+  await mockGateway(page, DEFAULT_REPLY, {
+    reasoning: "Let me think about this carefully.",
+    reasoningMs: 4200,
+  });
+  await page.goto("/gateway/chat");
+  await signIn(page);
+
+  const composer = page.getByPlaceholder("Message Foonix…");
+  await expect(composer).toBeVisible({ timeout: 15_000 });
+  await composer.fill("Think then pong");
+  await composer.press("Enter");
+
+  // Once the answer arrives the block collapses to a "Thought for Ns" row.
+  await expect(page.getByText("ready when you are.")).toBeVisible({
+    timeout: 15_000,
+  });
+  const summary = page.getByRole("button", { name: /Thought for \d+s/ });
+  await expect(summary).toBeVisible();
+
+  // Expanding reveals the reasoning text.
+  await summary.click();
+  await expect(
+    page.getByText("Let me think about this carefully."),
+  ).toBeVisible();
+
+  // The reasoning survives a reload (persisted server-side).
+  await page.waitForTimeout(600);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: /Thought for \d+s/ }),
+  ).toBeVisible({ timeout: 15_000 });
 });
 
 test("chat: renders markdown, regenerates, and renames", async ({ page }) => {

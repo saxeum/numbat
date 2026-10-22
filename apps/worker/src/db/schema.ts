@@ -168,6 +168,10 @@ export const messages = sqliteTable(
     promptTokens: integer("prompt_tokens"),
     completionTokens: integer("completion_tokens"),
     reasoningTokens: integer("reasoning_tokens"),
+    /** Extended-thinking text shown in the collapsible "Thinking" block. */
+    reasoning: text("reasoning"),
+    /** How long the model thought before the answer started (ms). */
+    reasoningMs: integer("reasoning_ms"),
     ttftMs: integer("ttft_ms"),
     totalMs: integer("total_ms"),
     stopped: integer("stopped", { mode: "boolean" }).notNull().default(false),

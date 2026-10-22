@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { geminiStreamToOpenAI } from "../src/gateway/gemini";
+import {
+  fromGeminiResponse,
+  geminiStreamToOpenAI,
+} from "../src/gateway/gemini";
 
 function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -39,5 +42,37 @@ describe("geminiStreamToOpenAI", () => {
     expect(out).toContain('"prompt_tokens":5');
     expect(out).toContain('"completion_tokens":2');
     expect(out).toContain('"reasoning_tokens":3');
+  });
+
+  it("separates `thought` parts into reasoning_content", async () => {
+    const sse = [
+      'data: {"candidates":[{"content":{"parts":[{"text":"Let me think","thought":true},{"text":"pong"}]}}]}\n\n',
+      'data: {"candidates":[{"finishReason":"STOP"}]}\n\n',
+    ];
+
+    const out = await collect(geminiStreamToOpenAI(streamOf(sse), "gemini-x"));
+
+    expect(out).toContain('"reasoning_content":"Let me think"');
+    expect(out).toContain('"content":"pong"');
+  });
+
+  it("returns reasoning_content on the non-streaming message", () => {
+    const body = fromGeminiResponse(
+      {
+        candidates: [
+          {
+            content: {
+              parts: [{ text: "why", thought: true }, { text: "pong" }],
+            },
+            finishReason: "STOP",
+          },
+        ],
+      },
+      "gemini-x",
+    );
+
+    const message = body.choices[0]!.message;
+    expect(message.content).toBe("pong");
+    expect(message.reasoning_content).toBe("why");
   });
 });
