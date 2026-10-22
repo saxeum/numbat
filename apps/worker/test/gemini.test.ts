@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   fromGeminiResponse,
   geminiStreamToOpenAI,
+  toGeminiRequest,
 } from "../src/gateway/gemini";
 
 function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
@@ -26,6 +27,19 @@ async function collect(stream: ReadableStream<Uint8Array>): Promise<string> {
   }
   return out;
 }
+
+describe("toGeminiRequest", () => {
+  it("asks Gemini for thought summaries", () => {
+    const body = toGeminiRequest({
+      model: "gemini-3.6-flash",
+      messages: [{ role: "user", content: "hi" }],
+      stream: true,
+    });
+    expect(body.generationConfig).toMatchObject({
+      thinkingConfig: { includeThoughts: true },
+    });
+  });
+});
 
 describe("geminiStreamToOpenAI", () => {
   it("emits a trailing usage chunk (with reasoning tokens)", async () => {

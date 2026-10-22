@@ -48,6 +48,10 @@ export function toGeminiRequest(body: ChatCompletionRequest): Json {
   const maxTokens = body.max_tokens ?? body.max_completion_tokens;
   if (typeof maxTokens === "number")
     generationConfig.maxOutputTokens = maxTokens;
+  // Ask Gemini for thought summaries so the chat can render a streaming
+  // "Thinking" block. Lite models without thinking ignore it; harmless
+  // elsewhere (verified against lite/Gemma/Gemini 3.x).
+  generationConfig.thinkingConfig = { includeThoughts: true };
 
   const out: Json = { contents };
   if (system) out.systemInstruction = { parts: [{ text: system }] };
