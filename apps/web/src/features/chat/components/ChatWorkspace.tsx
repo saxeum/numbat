@@ -47,12 +47,30 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [trimmed, setTrimmed] = useState(0);
+  const [pendingUser, setPendingUser] = useState<string | null>(null);
 
   const activeConversation = conversationQuery.data ?? null;
   const messages = activeConversation?.messages ?? [];
-  const isEmpty = messages.length === 0;
+  // Show the just-sent turn while the server persists it: a brand-new
+  // conversation has no messages until the turn is stored, so without this the
+  // streaming reply is hidden behind the empty state and only appears when the
+  // refetch lands.
+  const optimisticUser: Message | null = pendingUser
+    ? {
+        id: "__optimistic_user__",
+        conversationId: "",
+        role: "user",
+        content: pendingUser,
+        stopped: false,
+        createdAt: "",
+      }
+    : null;
+  const displayMessages = optimisticUser
+    ? [...messages, optimisticUser]
+    : messages;
+  const showThread = displayMessages.length > 0 || streaming;
   const loadingConversation =
-    Boolean(conversationId) && conversationQuery.isPending;
+    Boolean(conversationId) && conversationQuery.isPending && !pendingUser;
   const offline = health.isError;
 
   async function invalidate(id: string) {
@@ -65,19 +83,20 @@ export function ChatWorkspace() {
     if (!text || streaming) return;
     setError(null);
     setTrimmed(0);
-
-    let id = conversationId;
-    if (!id) {
-      const created = await createConversation.mutateAsync({
-        title: deriveTitle(text),
-        model,
-      });
-      id = created.id;
-      navigate(`/gateway/chat/${id}`, { replace: true });
-    }
-    setInput("");
+    setPendingUser(text);
 
     try {
+      let id = conversationId;
+      if (!id) {
+        const created = await createConversation.mutateAsync({
+          title: deriveTitle(text),
+          model,
+        });
+        id = created.id;
+        navigate(`/gateway/chat/${id}`, { replace: true });
+      }
+      setInput("");
+
       const result = await send({
         conversationId: id,
         model,
@@ -88,6 +107,8 @@ export function ChatWorkspace() {
       await invalidate(id);
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Chat failed");
+    } finally {
+      setPendingUser(null);
     }
   }
 
@@ -179,7 +200,7 @@ export function ChatWorkspace() {
         </div>
       ) : loadingConversation ? (
         <ConversationSkeleton />
-      ) : isEmpty ? (
+      ) : !showThread ? (
         <EmptyState composer={composer(true)} />
       ) : (
         <>
@@ -189,7 +210,7 @@ export function ChatWorkspace() {
             </div>
           ) : null}
           <MessageList
-            messages={messages}
+            messages={displayMessages}
             streaming={streaming}
             liveText={liveText}
             liveReasoning={liveReasoning}

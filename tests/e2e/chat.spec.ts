@@ -60,6 +60,7 @@ async function mockGateway(
   page: Page,
   reply: string = DEFAULT_REPLY,
   thinking?: { reasoning: string; reasoningMs?: number },
+  delayMs = 0,
 ) {
   let seq = 0;
   const uid = () => `id-${++seq}`;
@@ -189,6 +190,7 @@ async function mockGateway(
         regenerate?: boolean;
         model: string;
       };
+      if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
       if (!body.regenerate) {
         conversation.messages.push({
           id: uid(),
@@ -315,6 +317,29 @@ test("chat: shows and persists the thinking block", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: /Thought for \d+s/ }),
   ).toBeVisible({ timeout: 15_000 });
+});
+
+test("chat: shows the sent turn immediately, before the reply streams", async ({
+  page,
+}) => {
+  await mockGateway(page, DEFAULT_REPLY, undefined, 1500);
+  await page.goto("/gateway/chat");
+  await signIn(page);
+
+  const composer = page.getByPlaceholder("Message Foonix…");
+  await expect(composer).toBeVisible({ timeout: 15_000 });
+  await composer.fill("Hello there");
+  await composer.press("Enter");
+
+  // The just-sent turn renders immediately instead of the thread going empty
+  // while the server persists the turn and the reply streams.
+  await expect(
+    page.getByTestId("message-scroll").getByText("Hello there"),
+  ).toBeVisible({ timeout: 2000 });
+
+  await expect(page.getByText("ready when you are.")).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("chat: renders markdown, regenerates, and renames", async ({ page }) => {
