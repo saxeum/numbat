@@ -337,8 +337,17 @@ test("chat: shows the sent turn immediately, before the reply streams", async ({
     page.getByTestId("message-scroll").getByText("Hello there"),
   ).toBeVisible({ timeout: 2000 });
 
-  // The assistant blob animates while waiting for the first token.
-  await expect(page.locator(".mark-waiting")).toBeVisible({ timeout: 2000 });
+  // The assistant blob spins while waiting for the answer to start.
+  const blob = page.locator(".mark-waiting").first();
+  await expect(blob).toBeVisible({ timeout: 2000 });
+  const anim = await blob.evaluate((el) => ({
+    name: getComputedStyle(el).animationName,
+    transform: getComputedStyle(el).transform,
+  }));
+  expect(anim.name).toContain("mark-waiting-spin");
+  await page.waitForTimeout(250);
+  const later = await blob.evaluate((el) => getComputedStyle(el).transform);
+  expect(later).not.toBe(anim.transform);
 
   await expect(page.getByText("ready when you are.")).toBeVisible({
     timeout: 15_000,

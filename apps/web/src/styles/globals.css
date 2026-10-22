@@ -334,11 +334,22 @@
   }
 }
 
-/* Assistant blob while waiting for the first token of a reply. */
+/* Assistant blob while waiting for the answer to start. */
+@keyframes mark-waiting-spin {
+  from {
+    transform: rotate(0deg) scale(0.9);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.15);
+  }
+  to {
+    transform: rotate(360deg) scale(0.9);
+  }
+}
 .mark-waiting {
   animation:
-    mark-blob 1.8s ease-in-out infinite,
-    mark-spin 1.8s linear infinite;
+    mark-waiting-spin 1.3s linear infinite,
+    mark-blob 1.3s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .mark-waiting {

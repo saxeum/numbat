@@ -131,11 +131,12 @@ export function MessageItem({
   }
 
   const metrics = usageSummary(message);
+  // Keep the blob spinning while the assistant is generating but no answer
+  // text has arrived yet — this covers the hidden "thinking" phase too.
+  const waiting = Boolean(streaming) && !message.content;
   // While the answer is still empty the model is (still) thinking.
   const thinking =
     Boolean(streaming) && !message.content && Boolean(message.reasoning);
-  // Waiting for the very first token (neither thinking nor answer yet).
-  const waiting = Boolean(streaming) && !message.content && !message.reasoning;
 
   return (
     <div className="flex gap-3">
