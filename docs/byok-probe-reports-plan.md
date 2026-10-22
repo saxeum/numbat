@@ -1,7 +1,7 @@
 # numbat — BYOK probe reports + availability-driven chat
 
-- **Status:** In progress — phases 1–6 implemented (KAN-47…52); phase 7
-  (rate-limit/retention/observability) remains
+- **Status:** Complete — phases 1–7 implemented (KAN-47…53); phases 8–9 are
+  optional follow-ups
 - **Date:** 2026-10-22
 - **Ticket:** Jira **KAN** (epic + subtasks; see §11)
 - **Source:** `soper/manual-curl` — `src/domain/*`, `src/probe/*`,
@@ -241,9 +241,15 @@ programmatic `/v1` use.
   only in the consumer isolate during a run, never logged.
 - Evidence stores the **response** body/headers and the JSON request body only;
   auth headers are never persisted.
-- Rate-limit `POST /api/reports`; cap probes per run via `REPORT_PROBE_LIMIT`.
-- Retention: prune `probe_runs`/`probe_run_models` older than N days to bound D1
-  size; denormalized `owner_id` makes deletes cheap.
+- **Limits (KAN-53):** `POST /api/reports` rejects a user's Nth start within a
+  rolling hour with `429 RATE_LIMITED` (`REPORT_RATE_LIMIT_PER_HOUR`, default
+  10); each run probes at most `REPORT_PROBE_LIMIT` models (default 200).
+- **Retention (KAN-53):** a daily cron (`17 3 * * *`, prod) runs
+  `pruneOldReports`, deleting `probe_runs` older than `REPORT_RETENTION_DAYS`
+  (default 30). `probe_run_models` cascades; `model_availability` is kept (its
+  own recency TTL governs display).
+- **Observability:** structured `report-started` / `report-finished` /
+  `report-failed` / `report-retention` logs (counts and durations only).
 
 ---
 

@@ -20,6 +20,7 @@ import type { AppEnv } from "./api/types";
 import { createAuth } from "./auth";
 import { validateEnv } from "./config";
 import { executeReport } from "./reports/execute";
+import { pruneOldReports } from "./reports/retention";
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -68,6 +69,28 @@ const app = createApp();
 
 export default {
   fetch: app.fetch,
+  // Daily retention sweep for report runs (KAN-53).
+  async scheduled(_controller: ScheduledController, env: Env) {
+    try {
+      const result = await pruneOldReports(env);
+      console.log(
+        JSON.stringify({
+          level: "info",
+          type: "report-retention",
+          before: result.before,
+          deleted: result.deleted,
+        }),
+      );
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          type: "report-retention-failed",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  },
   // Probe reports run here rather than in the request path: a report lists and
   // probes every model, which can exceed the response-lifetime waitUntil cap.
   async queue(batch: MessageBatch<{ runId: string }>, env: Env) {

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
 
 import type { Database } from "../client";
 import { modelAvailability, probeRunModels, probeRuns } from "../schema";
@@ -214,6 +214,33 @@ export async function deleteProbeRun(
     .where(and(eq(probeRuns.ownerId, ownerId), eq(probeRuns.id, id)))
     .returning({ id: probeRuns.id });
   return result.length > 0;
+}
+
+/** Number of a user's reports created at/after `sinceIso` (rate limiting). */
+export async function countProbeRunsSince(
+  db: Database,
+  ownerId: string,
+  sinceIso: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(probeRuns)
+    .where(
+      and(eq(probeRuns.ownerId, ownerId), gte(probeRuns.createdAt, sinceIso)),
+    );
+  return row?.count ?? 0;
+}
+
+/** Delete runs created before `beforeIso`; their per-model rows cascade. */
+export async function pruneProbeRuns(
+  db: Database,
+  beforeIso: string,
+): Promise<number> {
+  const deleted = await db
+    .delete(probeRuns)
+    .where(lt(probeRuns.createdAt, beforeIso))
+    .returning({ id: probeRuns.id });
+  return deleted.length;
 }
 
 export function listProbeRunModels(

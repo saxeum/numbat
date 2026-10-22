@@ -183,7 +183,9 @@ paths:
       description: |
         Probes every model the provider lists, using the caller's stored
         (encrypted) credential. Returns `202` immediately; poll
-        `GET /reports/{id}` for progress and results.
+        `GET /reports/{id}` for progress and results. Capped at
+        `REPORT_PROBE_LIMIT` models per run and `REPORT_RATE_LIMIT_PER_HOUR`
+        starts per hour (responds `429` when exceeded).
       requestBody:
         required: true
         content:

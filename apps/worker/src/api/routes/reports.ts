@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { createDb } from "../../db/client";
 import { getCredentialMetaById } from "../../db/queries/credentials";
 import {
+  countProbeRunsSince,
   createProbeRun,
   deleteProbeRun,
   findActiveProbeRun,
@@ -14,6 +15,7 @@ import {
   type ProbeRunModelRow,
   type ProbeRunRow,
 } from "../../db/queries/reports";
+import { reportRateLimitPerHour } from "../../reports/limits";
 import { requireSession } from "../middleware/auth";
 import { AppError } from "../middleware/error";
 import { validate } from "../openapi";
@@ -134,6 +136,17 @@ reports.post("/", validate("json", CreateReportRequest), async (c) => {
       409,
       "RUN_IN_PROGRESS",
       "A report is already running; wait for it to finish",
+    );
+  }
+
+  // Per-user cap so a user can't churn through expensive provider quota.
+  const perHour = reportRateLimitPerHour(c.env);
+  const sinceIso = new Date(Date.now() - 3_600_000).toISOString();
+  if ((await countProbeRunsSince(db, ownerId, sinceIso)) >= perHour) {
+    throw new AppError(
+      429,
+      "RATE_LIMITED",
+      `Report limit reached (${perHour} per hour); try again later`,
     );
   }
 

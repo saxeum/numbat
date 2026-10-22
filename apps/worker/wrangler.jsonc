@@ -22,6 +22,10 @@
     // Provider request/response tracing. Bodies are truncated (8 KB) and the
     // provider key is never logged. Turn off by setting to "0" and redeploy.
     "GATEWAY_LLM_LOGGING": "1",
+    // Report limits (KAN-53): models per run, starts per user/hour, retention.
+    "REPORT_PROBE_LIMIT": "200",
+    "REPORT_RATE_LIMIT_PER_HOUR": "10",
+    "REPORT_RETENTION_DAYS": "30",
   },
   "d1_databases": [
     {
@@ -37,6 +41,8 @@
       { "queue": "numbat-probe-runs", "max_batch_size": 1, "max_retries": 2 },
     ],
   },
+  // Daily retention sweep for report runs (KAN-53). Named envs don't inherit.
+  "triggers": { "crons": ["17 3 * * *"] },
   "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
   "env": {
     "staging": {

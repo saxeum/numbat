@@ -34,6 +34,24 @@ and [`incident-response.md`](incident-response.md).
 > for the binding; edit `wrangler.jsonc` and redeploy to change it. (Cloudflare's
 > separate zone-level *WAF Rate limiting rules* do have a dashboard page — see §5.)
 
+### 1.1 Per-user report limit (KAN-53)
+
+On top of the IP-based global limit, `POST /api/reports` enforces a **per-user**
+cap: at most `REPORT_RATE_LIMIT_PER_HOUR` (default **10**) report starts in a
+rolling hour, counted from `probe_runs`. Exceeding it returns `429`:
+
+```json
+{ "error": { "code": "RATE_LIMITED", "message": "Report limit reached (10 per hour); try again later", "requestId": "…" } }
+```
+
+This is application-level (a D1 count), not the Rate Limiting binding, because it
+is per-account rather than per-IP and should be consistent across colos. Code:
+`apps/worker/src/api/routes/reports.ts`; knob: `apps/worker/src/reports/limits.ts`.
+
+Related knobs: `REPORT_PROBE_LIMIT` (models per run, default 200) and
+`REPORT_RETENTION_DAYS` (daily prune, default 30). See
+[`byok-probe-reports-plan.md`](byok-probe-reports-plan.md) §8.
+
 ---
 
 ## 2. Test on a PR preview (recommended — isolated, safe)

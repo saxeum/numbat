@@ -46,6 +46,10 @@ interface Env {
   PROBE_QUEUE?: Queue<{ runId: string }>;
   /** Max models probed per report (default 200). */
   REPORT_PROBE_LIMIT?: string;
+  /** Max reports a user may start per hour (default 10). */
+  REPORT_RATE_LIMIT_PER_HOUR?: string;
+  /** Days to keep probe runs/results before the daily prune (default 30). */
+  REPORT_RETENTION_DAYS?: string;
   /** Days a model stays "available" after its last successful probe (default 7). */
   AVAILABILITY_TTL_DAYS?: string;
 }

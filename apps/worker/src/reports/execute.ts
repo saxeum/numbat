@@ -7,6 +7,7 @@ import {
   runProbes,
   totalsFor,
   type ProbeOutcome,
+  type ProviderAdapter,
 } from "@numbat/probe";
 
 import { openSecret } from "../crypto/vault";
@@ -22,6 +23,7 @@ import {
   type AvailabilityUpsert,
   type ProbeRunModelRow,
 } from "../db/queries/reports";
+import { reportProbeLimit } from "./limits";
 
 /** Wall-clock budget per provider request. */
 const PROBE_TIMEOUT_MS = 180_000;
@@ -110,10 +112,28 @@ export async function executeReport(env: Env, runId: string): Promise<void> {
     );
 
     const adapter = getAdapter(run.provider);
+    // Cap probes per run so a provider with a huge catalog can't blow the
+    // isolate's wall-clock budget or the D1 write volume.
+    const limit = reportProbeLimit(env);
+    const capped: ProviderAdapter = {
+      ...adapter,
+      listModels: async (ctx) =>
+        (await adapter.listModels(ctx)).slice(0, limit),
+    };
     const startedIso = new Date().toISOString();
 
+    console.log(
+      JSON.stringify({
+        level: "info",
+        type: "report-started",
+        runId: run.id,
+        provider: run.provider,
+        limit,
+      }),
+    );
+
     await runProbes(
-      adapter,
+      capped,
       {
         apiKey,
         timeoutMs: PROBE_TIMEOUT_MS,
@@ -143,6 +163,18 @@ export async function executeReport(env: Env, runId: string): Promise<void> {
       totalsJson: JSON.stringify(totalsFor(collected)),
       error: null,
     });
+
+    console.log(
+      JSON.stringify({
+        level: "info",
+        type: "report-finished",
+        runId: run.id,
+        provider: run.provider,
+        status: "succeeded",
+        probed: collected.length,
+        durationMs: Date.now() - startedAt,
+      }),
+    );
   } catch (error) {
     console.error(
       JSON.stringify({
