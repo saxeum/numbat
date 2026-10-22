@@ -134,10 +134,14 @@ export function MessageItem({
   // While the answer is still empty the model is (still) thinking.
   const thinking =
     Boolean(streaming) && !message.content && Boolean(message.reasoning);
+  // Waiting for the very first token (neither thinking nor answer yet).
+  const waiting = Boolean(streaming) && !message.content && !message.reasoning;
 
   return (
     <div className="flex gap-3">
-      <BrandMark className="mt-0.5 size-5" />
+      <BrandMark
+        className={waiting ? "mark-waiting mt-0.5 size-5" : "mt-0.5 size-5"}
+      />
       <div className="min-w-0 flex-1">
         {message.reasoning ? (
           <ThinkingBlock
