@@ -1,7 +1,7 @@
 # numbat — BYOK probe reports + availability-driven chat
 
-- **Status:** In progress — phases 1–5 implemented (KAN-47…51); phases 6–7
-  remain
+- **Status:** In progress — phases 1–6 implemented (KAN-47…52); phase 7
+  (rate-limit/retention/observability) remains
 - **Date:** 2026-10-22
 - **Ticket:** Jira **KAN** (epic + subtasks; see §11)
 - **Source:** `soper/manual-curl` — `src/domain/*`, `src/probe/*`,

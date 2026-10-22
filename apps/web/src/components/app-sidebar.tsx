@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   BookOpen,
+  ClipboardList,
   FileText,
   GitBranch,
   KeyRound,
@@ -38,6 +39,7 @@ interface NavItem {
 const gatewayNav: NavItem[] = [
   { to: "/gateway/chat", label: "Chat", icon: MessageSquare },
   { to: "/gateway/credentials", label: "Provider credentials", icon: KeyRound },
+  { to: "/gateway/reports", label: "Reports", icon: ClipboardList },
   { to: "/gateway/tokens", label: "API tokens", icon: Terminal },
 ];
 

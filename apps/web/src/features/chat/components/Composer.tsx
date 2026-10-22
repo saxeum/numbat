@@ -66,6 +66,7 @@ export function Composer({
     : (catalog[0]?.id ?? "");
 
   const loading = credentials.isPending || models.isPending;
+  const availableModels = models.data?.data ?? [];
 
   // Auto-grow up to ~10 lines.
   useEffect(() => {
@@ -122,6 +123,25 @@ export function Composer({
           Connect a provider key
         </Link>{" "}
         to start chatting.
+      </div>
+    );
+  }
+
+  if (
+    !loading &&
+    connectedProviders.length > 0 &&
+    availableModels.length === 0
+  ) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+        No models are available for your keys yet.{" "}
+        <Link
+          to="/gateway/reports"
+          className="text-foreground underline-offset-4 hover:underline"
+        >
+          Run a report
+        </Link>{" "}
+        to discover which models your keys can use.
       </div>
     );
   }

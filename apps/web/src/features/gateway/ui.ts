@@ -3,3 +3,15 @@ export const selectClass =
 
 export const sectionClass =
   "flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm";
+
+export const PROVIDER_LABELS: Record<string, string> = {
+  gemini: "Google Gemini",
+  groq: "Groq",
+  nvidia: "NVIDIA",
+  openrouter: "OpenRouter",
+};
+
+export function providerLabel(provider: string | null | undefined): string {
+  if (!provider) return "—";
+  return PROVIDER_LABELS[provider] ?? provider;
+}

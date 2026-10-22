@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate } from "react-router";
 import { GatewayLayout } from "@/routes/gateway";
 import { GatewayChatPage } from "@/routes/gateway-chat";
 import { GatewayCredentialsPage } from "@/routes/gateway-credentials";
+import { GatewayReportDetailPage } from "@/routes/gateway-report-detail";
+import { GatewayReportsPage } from "@/routes/gateway-reports";
 import { GatewayTokensPage } from "@/routes/gateway-tokens";
 import { GuidePage } from "@/routes/guide";
 import { HomePage } from "@/routes/home";
@@ -49,6 +51,8 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="chat" replace /> },
       { path: "chat/:conversationId?", element: <GatewayChatPage /> },
       { path: "credentials", element: <GatewayCredentialsPage /> },
+      { path: "reports", element: <GatewayReportsPage /> },
+      { path: "reports/:id", element: <GatewayReportDetailPage /> },
       { path: "tokens", element: <GatewayTokensPage /> },
     ],
   },
