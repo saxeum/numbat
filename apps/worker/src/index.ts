@@ -69,7 +69,10 @@ const app = createApp();
 
 export default {
   fetch: app.fetch,
-  // Daily retention sweep for report runs (KAN-53).
+  // Report-retention sweep for runs older than REPORT_RETENTION_DAYS (KAN-53).
+  // Nothing schedules this since KAN-60 (`triggers.crons` is empty), so it only
+  // runs if a cron is re-armed or it is invoked directly. Kept deliberately:
+  // re-arming is a one-line wrangler.jsonc change, no code change.
   async scheduled(_controller: ScheduledController, env: Env) {
     try {
       const result = await pruneOldReports(env);

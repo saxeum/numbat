@@ -41,8 +41,12 @@
       { "queue": "numbat-probe-runs", "max_batch_size": 1, "max_retries": 2 },
     ],
   },
-  // Daily retention sweep for report runs (KAN-53). Named envs don't inherit.
-  "triggers": { "crons": ["17 3 * * *"] },
+  // No cron triggers (KAN-60). The report-retention sweep (KAN-53) is no longer
+  // scheduled; `scheduled` in src/index.ts stays so re-arming is config-only.
+  // Keep the empty array: wrangler only PUTs /schedules when `triggers` is
+  // present, so deleting this key would leave the old cron running on Cloudflare.
+  // `triggers` is inheritable, so named envs (staging) get this too.
+  "triggers": { "crons": [] },
   "routes": [{ "pattern": "foonix.net/api/*", "zone_name": "foonix.net" }],
   "env": {
     "staging": {

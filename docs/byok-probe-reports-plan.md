@@ -244,10 +244,14 @@ programmatic `/v1` use.
 - **Limits (KAN-53):** `POST /api/reports` rejects a user's Nth start within a
   rolling hour with `429 RATE_LIMITED` (`REPORT_RATE_LIMIT_PER_HOUR`, default
   10); each run probes at most `REPORT_PROBE_LIMIT` models (default 200).
-- **Retention (KAN-53):** a daily cron (`17 3 * * *`, prod) runs
-  `pruneOldReports`, deleting `probe_runs` older than `REPORT_RETENTION_DAYS`
-  (default 30). `probe_run_models` cascades; `model_availability` is kept (its
-  own recency TTL governs display).
+- **Retention (KAN-53):** `pruneOldReports` deletes `probe_runs` older than
+  `REPORT_RETENTION_DAYS` (default 30). `probe_run_models` cascades;
+  `model_availability` is kept (its own recency TTL governs display).
+  **Not scheduled since KAN-60:** the daily `17 3 * * *` cron was removed, so
+  nothing prunes automatically — `wrangler.jsonc` keeps
+  `"triggers": { "crons": [] }` (an empty array is what clears the Cloudflare
+  schedule; deleting the key leaves it running). Re-arm by putting a cron back
+  in that array — the `scheduled` handler is still deployed and tested.
 - **Observability:** structured `report-started` / `report-finished` /
   `report-failed` / `report-retention` logs (counts and durations only).
 
