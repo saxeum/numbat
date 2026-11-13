@@ -62,3 +62,7 @@ desktop.ini
 
 # Google OAuth client downloads (never commit)
 client_secret_*.json
+
+# Local agent context / project memory (never commit)
+/AGENTS.md
+.pi/
