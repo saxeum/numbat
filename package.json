@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.22",
-    "@playwright/test": "^1.65.0",
+    "@playwright/test": "^1.65.1",
     "@redocly/cli": "^2.78.0",
     "concurrently": "^10",
     "openapi-zod-client": "^1.18.3",
