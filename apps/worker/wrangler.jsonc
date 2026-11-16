@@ -19,10 +19,11 @@
     "APP_VERSION": "0.0.0",
     "BETTER_AUTH_URL": "https://foonix.net",
     "BYOK_KEK_VERSION": "1",
-    // Provider request/response tracing. Bodies are truncated (8 KB) and the
-    // provider key is never logged. Turn off by setting to "0" and redeploy.
-    "GATEWAY_LLM_LOGGING": "1",
-    // Report limits (KAN-53): models per run, starts per user/hour, retention.
+    // Provider request/response tracing. Off: traced bodies contain user
+    // prompts. Enable only for a deliberate debugging window, then set back to
+    // "0" and redeploy.
+    "GATEWAY_LLM_LOGGING": "0",
+    // Report limits: models per run, starts per user/hour, retention.
     "REPORT_PROBE_LIMIT": "200",
     "REPORT_RATE_LIMIT_PER_HOUR": "10",
     "REPORT_RETENTION_DAYS": "30",
@@ -41,8 +42,8 @@
       { "queue": "numbat-probe-runs", "max_batch_size": 1, "max_retries": 2 },
     ],
   },
-  // No cron triggers (KAN-60). The report-retention sweep (KAN-53) is no longer
-  // scheduled; `scheduled` in src/index.ts stays so re-arming is config-only.
+  // No cron triggers. The report-retention sweep is no longer scheduled;
+  // `scheduled` in src/index.ts stays so re-arming is config-only.
   // Keep the empty array: wrangler only PUTs /schedules when `triggers` is
   // present, so deleting this key would leave the old cron running on Cloudflare.
   // `triggers` is inheritable, so named envs (staging) get this too.

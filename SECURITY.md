@@ -25,7 +25,8 @@ and the service proxies requests on their behalf. The highest-value areas are th
 - **Authentication and authorisation** — session handling (Better Auth), owner-scoped queries, and any
   route that returns another user's conversations, reports, or credentials.
 - **Prompt and response logging** — provider bodies are truncated and stored when
-  `GATEWAY_LLM_LOGGING` is on; anything that causes a key or a full body to be logged is in scope.
+  `GATEWAY_LLM_LOGGING` is on. It is off in the deployed configuration; anything that causes a
+  key or a full body to be logged is in scope.
 - **The public API surface** — `/api/*`, rate limiting, and the OpenAPI spec at `/api/docs`.
 
 Out of scope: findings that require a compromised provider account, denial of service by volume

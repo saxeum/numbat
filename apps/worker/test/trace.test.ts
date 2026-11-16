@@ -41,6 +41,19 @@ describe("gateway provider tracing", () => {
     expect(log).not.toHaveBeenCalled();
   });
 
+  it("never emits credential material", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    logProviderRequest(true, ctx, {
+      url: "https://generativelanguage.googleapis.com/v1beta/models/x:generateContent",
+      payload: { contents: [{ parts: [{ text: "hi" }] }] },
+    });
+
+    const entry = lastLog(log);
+    expect(Object.keys(entry)).not.toContain("authorization");
+    expect(Object.keys(entry)).not.toContain("headers");
+    expect(JSON.stringify(entry)).not.toContain("x-goog-api-key");
+  });
+
   it("logs a structured, correlated request", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     logProviderRequest(true, ctx, {
