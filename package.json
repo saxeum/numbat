@@ -27,11 +27,11 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.22",
-    "@playwright/test": "^1.64.1",
-    "@redocly/cli": "^2.65.0",
+    "@playwright/test": "^1.65.0",
+    "@redocly/cli": "^2.78.0",
     "concurrently": "^9",
     "openapi-zod-client": "^1.18.3",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "prettier-plugin-tailwindcss": "^0.8.1"
   },
   "allowScripts": {
