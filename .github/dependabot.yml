@@ -11,6 +11,17 @@ updates:
       npm-minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      # Majors are batched by dependency type so a week of breaking bumps costs
+      # two CI runs instead of one per package. Splitting runtime from dev means
+      # a broken dev-tool major cannot hold up a runtime one.
+      npm-major-development:
+        dependency-type: development
+        patterns: ["*"]
+        update-types: ["major"]
+      npm-major-production:
+        dependency-type: production
+        patterns: ["*"]
+        update-types: ["major"]
 
   - package-ecosystem: github-actions
     directory: "/"
