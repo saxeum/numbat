@@ -259,7 +259,7 @@ describe("catalog sync", () => {
           ? new Response("model is gone", { status: 404 })
           : json({ choices: [{ message: { content: "pong" } }] });
       }
-      if (url.includes("api.groq.com")) {
+      if (new URL(url).hostname === "api.groq.com") {
         return json({
           data: [{ id: "a-broken" }, { id: "b-broken" }, { id: "c-works" }],
         });

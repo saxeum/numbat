@@ -41,7 +41,11 @@ function stubUpstream(handlers: { groq?: () => Response }) {
         : input instanceof URL
           ? input.href
           : input.url;
-    if (url.includes("api.groq.com") && url.endsWith("/chat/completions")) {
+    const parsed = new URL(url);
+    if (
+      parsed.hostname === "api.groq.com" &&
+      parsed.pathname.endsWith("/chat/completions")
+    ) {
       return handlers.groq?.() ?? jsonResponse({});
     }
     // Credential verification hits a models list.

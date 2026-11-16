@@ -66,28 +66,28 @@ export function parseDurationMs(value: unknown): number | undefined {
     return Math.round(value * 1000);
   if (typeof value !== "string") return undefined;
   const text = value.trim();
-  if (!text) return undefined;
+  // Duration strings are short; cap the input so a malformed provider value
+  // cannot drive a long scan.
+  if (!text || text.length > 64) return undefined;
 
-  const parts = text.match(/([\d.]+)\s*(ms|s|m|h)/gi);
-  if (parts) {
-    let total = 0;
-    for (const part of parts) {
-      const match = part.match(/([\d.]+)\s*(ms|s|m|h)/i);
-      if (!match || match[1] === undefined || match[2] === undefined) continue;
-      const amount = Number(match[1]);
-      if (!Number.isFinite(amount)) continue;
-      const unit = match[2].toLowerCase();
-      total +=
-        unit === "ms"
-          ? amount
-          : unit === "s"
-            ? amount * 1000
-            : unit === "m"
-              ? amount * 60_000
-              : amount * 3_600_000;
-    }
-    return Math.round(total);
+  const pattern = /(\d+(?:\.\d+)?)\s*(ms|s|m|h)/gi;
+  let matched = false;
+  let total = 0;
+  for (const match of text.matchAll(pattern)) {
+    const amount = Number(match[1]);
+    const unit = match[2]?.toLowerCase();
+    if (!Number.isFinite(amount) || unit === undefined) continue;
+    matched = true;
+    total +=
+      unit === "ms"
+        ? amount
+        : unit === "s"
+          ? amount * 1000
+          : unit === "m"
+            ? amount * 60_000
+            : amount * 3_600_000;
   }
+  if (matched) return Math.round(total);
 
   const bare = Number(text);
   return Number.isFinite(bare) ? Math.round(bare * 1000) : undefined;

@@ -54,15 +54,19 @@ function stubUpstream(handlers: {
         : input instanceof URL
           ? input.href
           : input.url;
-    if (url.includes(":generateContent")) {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith(":generateContent")) {
       return handlers.gemini?.() ?? jsonResponse({ candidates: [] });
     }
-    if (url.includes("api.groq.com") && url.endsWith("/chat/completions")) {
+    if (
+      parsed.hostname === "api.groq.com" &&
+      parsed.pathname.endsWith("/chat/completions")
+    ) {
       return handlers.groq?.() ?? jsonResponse({});
     }
     if (
-      url.includes("integrate.api.nvidia.com") &&
-      url.endsWith("/chat/completions")
+      parsed.hostname === "integrate.api.nvidia.com" &&
+      parsed.pathname.endsWith("/chat/completions")
     ) {
       return handlers.nvidia?.() ?? jsonResponse({});
     }

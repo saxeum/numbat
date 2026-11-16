@@ -59,7 +59,9 @@ export function createOpenAiCompatibleAdapter(
       typeof configuredBaseUrl === "function"
         ? configuredBaseUrl(apiKey)
         : configuredBaseUrl;
-    return raw.replace(/\/+$/, "");
+    let end = raw.length;
+    while (end > 0 && raw[end - 1] === "/") end -= 1;
+    return raw.slice(0, end);
   };
   const modelsPath = config.modelsPath ?? "/models";
   const chatPath = config.chatPath ?? "/chat/completions";
