@@ -1,8 +1,7 @@
 # Contributing to numbat
 
 Trunk-based development: short-lived branches, review via pull request, merge to
-`main`, automatic deploy. See [`docs/workflow-plan.md`](docs/workflow-plan.md)
-for the rationale and the hardening roadmap.
+`main`, automatic deploy.
 
 ## Setup
 
@@ -29,8 +28,9 @@ Apply local migrations once with
    npm run test:e2e
    ```
 4. **Open a PR** — fill in the template; link issues; screenshots for UI.
-5. **Get a review** — at least one approval; address feedback; keep the branch
-   up to date with `main`.
+5. **Get a review** — address feedback and keep the branch up to date with
+   `main`. External contributions are reviewed by a maintainer; self-merge is
+   allowed once CI is green.
 6. **Squash-merge** once CI is green; delete the branch.
 
 ## Commit messages
@@ -42,8 +42,8 @@ subject imperative and under ~72 chars; put detail in the body.
 ## Checks
 
 CI (`.github/workflows/ci.yml`) runs on every PR: typecheck → lint → tests →
-build → Playwright E2E. The same `verify` job is intended to be a **required**
-status check on `main` (see `docs/workflow-plan.md` W1). Do not merge with red CI.
+build → Playwright E2E. The `verify` job (`typecheck · test · build`) is a
+**required** status check on `main`. Do not merge with red CI.
 
 ## Repository layout
 
@@ -54,7 +54,7 @@ status check on `main` (see `docs/workflow-plan.md` W1). Do not merge with red C
 | `packages/api` | `@numbat/api` — **generated** Zod + types (from `openapi/openapi.yaml`) |
 | `openapi/` | `openapi.yaml` (source of truth), redocly config, codegen template |
 | `tests/e2e` | Playwright end-to-end tests |
-| `docs/` | Architecture, frontend, plans (workflow, readiness, persistence, openapi) |
+| `docs/` | Architecture, frontend, and operational runbooks |
 
 ## API contracts (spec-first)
 
@@ -70,8 +70,7 @@ Handlers stay hand-written in Hono, validated with the generated Zod schemas.
 
 ## Boundaries
 
-- **Auth is enforced** on every `/api/*` route except `/api/health` (Better Auth + Google OAuth; see
-  [`docs/auth-plan.md`](docs/auth-plan.md)).
+- **Auth is enforced** on every `/api/*` route except `/api/health` (Better Auth + Google OAuth).
 - **Don't commit** secrets, `.dev.vars`, or per-app `package-lock.json` files —
   one root lockfile is the workspace source of truth.
 - **Keep `compatibility_date` identical** across both `wrangler.jsonc` files.

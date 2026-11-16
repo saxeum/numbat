@@ -37,7 +37,7 @@ explicitly requested (see `agents.md`).
 > **Versions at scaffold time (2026-10):** Vite 9, React 19, TypeScript 7,
 > React Router 8 (library mode), Tailwind v4, and shadcn v4 (Nova preset, unified
 > `radix-ui`). Forms use React Hook Form 7 with `@hookform/resolvers@5.9`
-> (`6.x` has an `effect` peer conflict — see `scaffold-runbook.md` §12). Note that
+> (`6.x` has an `effect` peer conflict). Note that
 > TypeScript 7 removed `baseUrl`: the `@/*` alias is declared with `paths` only and
 > mirrored in `vite.config.ts`.
 
@@ -125,9 +125,8 @@ apps/web/
 - **Data fetching** goes through TanStack Query hooks; components never call `fetch`
   directly. Query keys are centralized.
 - **API access** is typed by the generated `@numbat/api` schemas; the SPA parses
-  responses with them. A generated fetch/query client is a follow-up
-  (`openapi-plan.md` Phase 4). The served OpenAPI document is the contract for
-  docs and external consumers.
+  responses with them. A generated fetch/query client is a follow-up. The served
+  OpenAPI document is the contract for docs and external consumers.
 - **Forms** use React Hook Form with `zodResolver`, validating against schemas
   from `@numbat/api` — the same schemas the API validates with.
 - **Errors** surface through a single boundary + toast pattern; API error envelopes

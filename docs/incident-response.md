@@ -1,8 +1,7 @@
 # numbat — Incident Response & Rollback Runbook
 
 Practical steps for detecting, mitigating, and rolling back incidents. Companion
-to [`architecture.md`](architecture.md) §13 and [`scaffold-runbook.md`](scaffold-runbook.md)
-§11.
+to [`architecture.md`](architecture.md) §13.
 
 > Run `wrangler` from `apps/worker` (or `apps/web` for the web Worker), or pass
 > `-c apps/<app>/wrangler.jsonc`. Running it at the repo root fails (workspace).
@@ -67,7 +66,7 @@ npx wrangler rollback --name numbat-api-staging
 
 ## 5. Data (D1)
 
-Migrations are **forward-only** (`persistence-plan.md` §7) — you don't roll a
+Migrations are **forward-only** — you don't roll a
 migration back; you ship a corrective one. For bad data:
 
 - **Inspect:** `npx wrangler d1 execute numbat-db --remote --command "SELECT …"`.

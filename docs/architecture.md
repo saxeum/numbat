@@ -22,10 +22,10 @@ requested (see `agents.md`).
 | D5 | Unit/integration tests | **Vitest + `@cloudflare/vitest-pool-workers`** | Miniflare directly; mocked bindings |
 | D6 | Browser E2E tests | **Playwright** | Cypress |
 | D7 | CI/CD | **GitHub Actions + `cloudflare/wrangler-action`** (with Workers Builds as an option) | Workers Builds only; manual `wrangler deploy` |
-| D8 | Auth | **Better Auth (self-hosted), Google OAuth first** (see §10, [`auth-plan.md`](auth-plan.md)) | Cloudflare Access; Auth.js; managed IdP |
+| D8 | Auth | **Better Auth (self-hosted), Google OAuth first** (see §10) | Cloudflare Access; Auth.js; managed IdP |
 | D9 | Repo structure | **Monorepo (workspaces)** — API and web apps plus a shared contracts package | Single package |
 | D10 | Custom domain | **`foonix.net`** (apex; Cloudflare zone already in-account). Web + API share the origin via path routes | Subdomain split; `*.workers.dev` |
-| D11 | Preview deployments | **Per-PR Version URLs** (see `workflow-plan.md` W3) | Named preview env; Workers Builds/Previews |
+| D11 | Preview deployments | **Per-PR Version URLs** | Named preview env; Workers Builds/Previews |
 
 ---
 
@@ -77,7 +77,7 @@ deployable from the web Worker.
   (`openapi-zod-client`) produces Zod validators + TypeScript types in
   `@numbat/api`. Plain Hono routes validate with those schemas
   (`@hono/zod-validator`); the spec is served at `/api/openapi.json` with Swagger
-  UI at `/api/docs` (see [`openapi-plan.md`](openapi-plan.md)).
+  UI at `/api/docs`.
 - Middleware: request ID, structured logging, error handling, (later) auth and
   rate limiting.
 - REST conventions are defined in §7.
@@ -250,8 +250,7 @@ Full detail: [`frontend.md`](frontend.md).
 ## 10. Authentication & authorization
 
 **Decision (2026-10-20): [Better Auth](https://www.better-auth.com) self-hosted in
-the API Worker, Google OAuth as the first provider.** See
-[`auth-plan.md`](auth-plan.md).
+the API Worker, Google OAuth as the first provider.**
 
 - **Why:** same-origin (`foonix.net`) keeps session cookies first-party; Better
   Auth plugs into our **D1 + Drizzle** stack (`drizzleAdapter`) and mounts on
@@ -285,8 +284,8 @@ bindings rather than mocks.
 - **On pull request:** install → typecheck → lint → unit/integration tests →
   build (no deploy).
 - **Preview deployments: per-PR Version URLs.** CI uploads a version per PR
-  (`wrangler versions upload --preview-alias pr-<n>`) and comments the URL
-  (`workflow-plan.md` W3). Named preview environments or Workers Builds/Previews
+  (`wrangler versions upload --preview-alias pr-<n>`) and comments the URL.
+  Named preview environments or Workers Builds/Previews
   remain alternatives if previews need isolated storage — see §16.
 - **On merge to `main`:** build → deploy **both Workers** (web and API) to
   production via `cloudflare/wrangler-action` (e.g. a matrix over the two apps),
@@ -354,12 +353,11 @@ Deliberately out of scope for the first milestone; each is revisited before it
 becomes a blocker.
 
 1. **Authentication / authorization** — ✅ **implemented** (Better Auth + Google
-   OAuth, KAN-13): records are per-user and owner-scoped; sessions are first-party
-   cookies. See [`auth-plan.md`](auth-plan.md).
+   OAuth): records are per-user and owner-scoped; sessions are first-party
+   cookies.
 2. **Persistence (D1 + Drizzle)** — the API is built without a database first;
    D1 + Drizzle is the intended choice when persistence is introduced.
-3. **Preview deployments** — per-PR Version URLs are wired up (see §12 and
-   `workflow-plan.md` W3).
+3. **Preview deployments** — per-PR Version URLs are wired up (see §12).
 
 ### Open
 None at present. The frontend stack — the last open item — is now decided; see
@@ -367,15 +365,8 @@ None at present. The frontend stack — the last open item — is now decided; s
 
 ---
 
-## 17. Next steps
+## 17. Status
 
-The step-by-step execution guide is [`scaffold-runbook.md`](scaffold-runbook.md).
-
-1. Scaffold the monorepo: workspace root, `apps/web` (Vite + React SPA, web
-   Worker), `apps/worker` (Hono API Worker), and `packages/api` (generated
-   contracts).
-2. Wire the domain: `foonix.net` custom domain on the web Worker, `/api/*` route to
-   the API Worker.
-3. Add Vitest Workers pool and a Playwright smoke test.
-4. Add the GitHub Actions workflow for tests and production deploy of both Workers.
-5. Revisit the deferred items when they reach the top of the backlog.
+The design above is implemented and deployed. Operational documentation:
+[`incident-response.md`](incident-response.md) and
+[`rate-limiting.md`](rate-limiting.md).

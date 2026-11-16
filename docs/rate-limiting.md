@@ -1,8 +1,7 @@
 # Testing rate limiting
 
 How the API rate limit works and how to test it, with Cloudflare console links.
-Companion to [`production-readiness-plan.md`](production-readiness-plan.md) P1.2
-and [`incident-response.md`](incident-response.md).
+Companion to [`incident-response.md`](incident-response.md).
 
 ---
 
@@ -34,7 +33,7 @@ and [`incident-response.md`](incident-response.md).
 > for the binding; edit `wrangler.jsonc` and redeploy to change it. (Cloudflare's
 > separate zone-level *WAF Rate limiting rules* do have a dashboard page — see §5.)
 
-### 1.1 Per-user report limit (KAN-53)
+### 1.1 Per-user report limit
 
 On top of the IP-based global limit, `POST /api/reports` enforces a **per-user**
 cap: at most `REPORT_RATE_LIMIT_PER_HOUR` (default **10**) report starts in a
@@ -49,8 +48,8 @@ is per-account rather than per-IP and should be consistent across colos. Code:
 `apps/worker/src/api/routes/reports.ts`; knob: `apps/worker/src/reports/limits.ts`.
 
 Related knobs: `REPORT_PROBE_LIMIT` (models per run, default 200) and
-`REPORT_RETENTION_DAYS` (daily prune, default 30). See
-[`byok-probe-reports-plan.md`](byok-probe-reports-plan.md) §8.
+`REPORT_RETENTION_DAYS` (retention window, default 30; pruning runs only when the
+scheduled handler is invoked).
 
 ---
 
@@ -98,7 +97,7 @@ after 60 s — just wait.
 ## 5. Cloudflare console links
 
 Account ID: `<CLOUDFLARE_ACCOUNT_ID>` · Zone: `foonix.net`
-(`<cloudflare-zone-id>`).
+(`<CLOUDFLARE_ZONE_ID>`).
 
 | What | Link / path |
 |------|-------------|

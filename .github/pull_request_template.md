@@ -23,8 +23,8 @@ Thanks for contributing! Keep PRs small and short-lived. See CONTRIBUTING.md.
 ## UI changes
 
 <!--
-If this changes the UI, include before/after screenshots or a preview URL
-(preview deployments are planned — see docs/workflow-plan.md W3).
+If this changes the UI, include before/after screenshots or the preview URL
+that the `preview` job comments on the PR.
 Remove this section if not applicable.
 -->
 

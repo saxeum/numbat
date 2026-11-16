@@ -135,8 +135,8 @@ print(
 - Keys are **per provider** and stored **encrypted** (envelope encryption); only
   ciphertext is written to the database.
 - Connect more than one provider so you can fall back when one is rate-limited.
-- The catalog is refreshed **nightly** by a cron job that lists each provider's
-  models, probes anything new, and writes the result to `free_models` — see
-  [`free-model-discovery-cron.md`](free-model-discovery-cron.md). The
+- The catalog is refreshed by a scheduled sync that lists each provider's models,
+  probes anything new, and writes the result to `free_models`. It is currently
+  not scheduled; re-arm it by adding a cron entry to `wrangler.jsonc`. The
   `"provider"` field on a chat request still lets you use any model id the
   provider accepts, even if the sync has not picked it up yet.

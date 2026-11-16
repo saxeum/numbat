@@ -1,8 +1,7 @@
 # Creating the Google OAuth client (numbat)
 
 Step-by-step guide to create the Google Cloud OAuth client that numbat uses for
-sign-in (Better Auth's Google provider). Companion to
-[`auth-plan.md`](auth-plan.md).
+sign-in (Better Auth's Google provider).
 
 - **Redirect URIs are exact — no wildcards.** They must match character-for-character.
 - Scopes used are **non-sensitive** (`openid`, `email`, `profile`), so no Google
