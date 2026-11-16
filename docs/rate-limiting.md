@@ -57,11 +57,11 @@ Related knobs: `REPORT_PROBE_LIMIT` (models per run, default 200) and
 ## 2. Test on a PR preview (recommended — isolated, safe)
 
 1. Open a PR; the bot comments the preview URLs. Use the **API** one, e.g.
-   `https://pr-<n>-numbat-api-preview.<account-subdomain>.workers.dev`.
+   `https://pr-<n>-numbat-api-preview.<account>.workers.dev`.
 2. Fire more than 120 requests and count statuses:
 
 ```bash
-BASE=https://pr-<n>-numbat-api-preview.<account-subdomain>.workers.dev
+BASE=https://pr-<n>-numbat-api-preview.<account>.workers.dev
 
 # single request should be 200
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/api/openapi.json"
@@ -81,7 +81,7 @@ Expected (verified on PR #26): `120` × `200` and `20` × `429`.
 
 ## 3. Test on staging
 
-Same as above against `https://numbat-api-staging.<account-subdomain>.workers.dev`
+Same as above against `https://numbat-api-staging.<account>.workers.dev`
 (namespace `1002`). Staging is isolated from prod.
 
 ## 4. Test on production (use sparingly)
@@ -97,18 +97,18 @@ after 60 s — just wait.
 
 ## 5. Cloudflare console links
 
-Account ID: `<cloudflare-account-id>` · Zone: `foonix.net`
+Account ID: `<CLOUDFLARE_ACCOUNT_ID>` · Zone: `foonix.net`
 (`<cloudflare-zone-id>`).
 
 | What | Link / path |
 |------|-------------|
-| Account home | https://dash.cloudflare.com/<cloudflare-account-id> |
-| Workers & Pages (list) | https://dash.cloudflare.com/<cloudflare-account-id>/workers-and-pages |
+| Account home | https://dash.cloudflare.com/<CLOUDFLARE_ACCOUNT_ID> |
+| Workers & Pages (list) | https://dash.cloudflare.com/<CLOUDFLARE_ACCOUNT_ID>/workers-and-pages |
 | API Worker (`numbat-api`) → Metrics / Logs | Workers & Pages → **numbat-api** → **Metrics** / **Logs** (or the URL `…/workers/services/view/numbat-api/production`) |
 | Preview Worker (`numbat-api-preview`) | Workers & Pages → **numbat-api-preview** |
 | Staging Worker (`numbat-api-staging`) | Workers & Pages → **numbat-api-staging** |
-| Zone → Security → **WAF / Rate limiting rules** (zone-level alternative) | https://dash.cloudflare.com/<cloudflare-account-id>/foonix.net/security/waf/rate-limiting-rules |
-| Zone → Analytics | https://dash.cloudflare.com/<cloudflare-account-id>/foonix.net/analytics |
+| Zone → Security → **WAF / Rate limiting rules** (zone-level alternative) | https://dash.cloudflare.com/<CLOUDFLARE_ACCOUNT_ID>/foonix.net/security/waf/rate-limiting-rules |
+| Zone → Analytics | https://dash.cloudflare.com/<CLOUDFLARE_ACCOUNT_ID>/foonix.net/analytics |
 
 > Dashboard URL paths occasionally change — if a link 404s, navigate from the
 > account home via the labels above.

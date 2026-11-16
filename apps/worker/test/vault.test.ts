@@ -21,10 +21,10 @@ const context: SecretContext = {
 
 describe("vault (envelope encryption)", () => {
   it("round-trips a secret and never stores the plaintext", async () => {
-    const sealed = await sealSecret(env, context, "gsk_live_secret");
-    expect(sealed.ciphertext).not.toContain("gsk_live_secret");
-    expect(sealed.wrappedDek).not.toContain("gsk_live_secret");
-    expect(await openSecret(env, context, sealed)).toBe("gsk_live_secret");
+    const sealed = await sealSecret(env, context, "test-secret-value");
+    expect(sealed.ciphertext).not.toContain("test-secret-value");
+    expect(sealed.wrappedDek).not.toContain("test-secret-value");
+    expect(await openSecret(env, context, sealed)).toBe("test-secret-value");
   });
 
   it("produces fresh key material per seal (semantic security)", async () => {

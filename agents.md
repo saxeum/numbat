@@ -54,22 +54,11 @@ backend, deployed to Cloudflare Workers.
   (per-user probe reports + `model_availability`-driven chat and routing; epic
   **KAN-46**).
 
-## Verified CLI Access
+## CLI access
 
-### GitHub — `gh`
-- `gh` at `~/.local/bin/gh` (version 2.102.0).
-- Authenticated as **`gmtreacy`** (Git operations over SSH).
-- Token scopes: `gist`, `read:org`, `repo`.
-- Confirmed access to the **`saxeum`** org and its private repos.
+- **GitHub:** `gh`, authenticated as `gmtreacy` (SSH for git operations).
+- **Cloudflare:** `wrangler`, installed globally; see [`docs/scaffold-runbook.md`](docs/scaffold-runbook.md).
 
-### Cloudflare — `wrangler`
-- `wrangler` v4.151.2 installed globally (`npm install -g wrangler`).
-- Authenticated via OAuth as **<redacted-email>**.
-- Account: `<redacted-email>'s Account` (`<cloudflare-account-id>`).
-- Credentials stored in `~/.config/.wrangler/config/default.toml`; the access
-  token refreshes automatically via the stored refresh token.
-- Confirmed `workers:write`, `workers_scripts:write`, `d1:write`, `pages:write`,
-  `workers_kv:write`, and more.
-
-> Secrets (OAuth/refresh tokens) live only in the config file above. Never print,
-> commit, or paste them; reference them by path.
+> Never print, commit, or paste tokens, account identifiers, or credential paths into this file.
+> Reference credentials by the location that holds them, never by value. **Everything in this file
+> is published with the repository.**

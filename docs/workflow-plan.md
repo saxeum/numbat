@@ -110,7 +110,7 @@ preview D1).
   true` (per-version PR URLs only) in both `wrangler.jsonc` files.
 - On PR, after `verify`, CI runs `wrangler versions upload --preview-alias
   pr-<number>` for both Workers and posts/updates a single comment with the alias
-  URLs (`https://pr-<n>-numbat-web.<account-subdomain>.workers.dev`, `...-numbat-api...`).
+  URLs (`https://pr-<n>-numbat-web.<account>.workers.dev`, `...-numbat-api...`).
 - Fork PRs are skipped (no secrets). PR previews are isolated per version; no new
   DNS.
 

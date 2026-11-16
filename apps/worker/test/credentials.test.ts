@@ -52,7 +52,7 @@ describe("credentials (authenticated)", () => {
       headers: { ...json, cookie },
       body: JSON.stringify({
         provider: "groq",
-        apiKey: "gsk_live_secret_value",
+        apiKey: "test-provider-key-not-real",
       }),
     });
     expect(create.status).toBe(201);
@@ -60,7 +60,7 @@ describe("credentials (authenticated)", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
 
     // The response never contains the key.
-    expect(JSON.stringify(created)).not.toContain("gsk_live_secret_value");
+    expect(JSON.stringify(created)).not.toContain("test-provider-key-not-real");
 
     // The database holds ciphertext only.
     const row = await env.DB.prepare(
@@ -68,7 +68,7 @@ describe("credentials (authenticated)", () => {
     ).first<{ ciphertext: string; wrapped_dek: string }>();
     expect(row?.ciphertext).toBeTruthy();
     expect(row?.wrapped_dek).toBeTruthy();
-    expect(row?.ciphertext).not.toContain("gsk_live_secret_value");
+    expect(row?.ciphertext).not.toContain("test-provider-key-not-real");
 
     // Listing returns masked metadata (no secret / ciphertext fields).
     const list = (await (
@@ -77,7 +77,7 @@ describe("credentials (authenticated)", () => {
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({ provider: "groq", label: "" });
     expect(Object.keys(list[0]!)).not.toContain("ciphertext");
-    expect(JSON.stringify(list)).not.toContain("gsk_live_secret_value");
+    expect(JSON.stringify(list)).not.toContain("test-provider-key-not-real");
 
     // Delete (crypto-shred).
     const del = await SELF.fetch(`${base}/${created.id}`, {
@@ -115,7 +115,7 @@ describe("credentials (authenticated)", () => {
       headers: { ...json, cookie },
       body: JSON.stringify({
         provider: "groq",
-        apiKey: "GROQ_API_KEY=gsk_live_value",
+        apiKey: "GROQ_API_KEY=test-key-value",
       }),
     });
 
@@ -123,7 +123,7 @@ describe("credentials (authenticated)", () => {
     // The upstream call used the bare value, not the whole line.
     const [, init] = fetchMock.mock.calls[0]!;
     const auth = (init?.headers as Record<string, string>).authorization;
-    expect(auth).toBe("Bearer gsk_live_value");
+    expect(auth).toBe("Bearer test-key-value");
   });
 
   it("validates the request body", async () => {

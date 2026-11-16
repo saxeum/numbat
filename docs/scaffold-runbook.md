@@ -19,7 +19,7 @@ node --version            # expect v24.x
 npm --version             # expect 11.x
 wrangler --version        # expect 4.x
 gh auth status            # expect gmtreacy logged in
-wrangler whoami           # expect account <redacted-email>
+wrangler whoami           # expect the account you intend to deploy to
 ```
 
 Reference values used throughout:
@@ -27,7 +27,7 @@ Reference values used throughout:
 | Thing | Value |
 |---|---|
 | GitHub repo | `saxeum/numbat` |
-| Cloudflare account ID | `<cloudflare-account-id>` |
+| Cloudflare account ID | `<CLOUDFLARE_ACCOUNT_ID>` |
 | Cloudflare zone | `foonix.net` (`<cloudflare-zone-id>`) |
 | Web Worker name | `numbat-web` |
 | API Worker name | `numbat-api` |
@@ -359,7 +359,7 @@ npm run deploy:web     # builds SPA, registers foonix.net (custom domain)
 > (formerly "preview URLs", `"preview_urls": true`) are exposed, and those are
 > wired into PR CI — see [`workflow-plan.md`](workflow-plan.md) W3. For a
 > temporary stable test hostname, set `"workers_dev": true` for that environment
-> (account subdomain `<account-subdomain>`) and remove it again afterwards. Note the
+> (your account subdomain) and remove it again afterwards. Note the
 > setting is only applied by a **deploy**, not by `versions upload`.
 
 Verify:
@@ -514,7 +514,7 @@ Required repo secrets:
 | Secret | Value |
 |---|---|
 | `CLOUDFLARE_API_TOKEN` | A scoped API token (see below) |
-| `CLOUDFLARE_ACCOUNT_ID` | `<cloudflare-account-id>` |
+| `CLOUDFLARE_ACCOUNT_ID` | `<CLOUDFLARE_ACCOUNT_ID>` |
 
 **Create the CI token** (Cloudflare dashboard → My Profile → API Tokens → Create
 Token) with:

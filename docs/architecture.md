@@ -99,7 +99,7 @@ deployable from the web Worker.
 | `foonix.net/*` | Web Worker | React SPA static assets + SPA fallback |
 
 - Both Workers and the `foonix.net` zone are in the same Cloudflare account
-  (`<cloudflare-account-id>`), so routes and the custom domain are managed
+  (`<CLOUDFLARE_ACCOUNT_ID>`), so routes and the custom domain are managed
   with the existing `wrangler` credentials.
 - A Workers **custom domain** at `foonix.net` provides the DNS record and
   certificate; the API Worker is attached with a **path route** (`/api/*` is more
