@@ -1,6 +1,13 @@
 # Copy to .dev.vars for local development (gitignored).
 ENVIRONMENT=development
 
+# Better Auth. Any values work locally; Google OAuth is optional in development.
+# BETTER_AUTH_URL must match the browser origin (the Vite dev server).
+BETTER_AUTH_URL=http://localhost:5173
+BETTER_AUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 # Envelope-encryption KEK (base64 of 32 random bytes). Generate with:
 #   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 # Production: wrangler secret put BYOK_KEK
