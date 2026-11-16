@@ -46,6 +46,11 @@ export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
           stack: err.stack,
         }),
       );
+      // Server-side failures keep their code but never echo internal detail.
+      return c.json(
+        envelope(err.code, "An unexpected error occurred", requestId),
+        err.status as 400,
+      );
     }
     return c.json(
       envelope(err.code, err.message, requestId, err.details),
@@ -54,7 +59,9 @@ export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
   }
 
   if (err instanceof HTTPException) {
-    return c.json(envelope("HTTP_ERROR", err.message, requestId), err.status);
+    const message =
+      err.status >= 500 ? "An unexpected error occurred" : err.message;
+    return c.json(envelope("HTTP_ERROR", message, requestId), err.status);
   }
 
   console.error(

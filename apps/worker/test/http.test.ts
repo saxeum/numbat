@@ -68,6 +68,30 @@ describe("error envelope", () => {
     expect(text).toContain("INTERNAL_ERROR");
     expect(text).not.toContain("do-not-leak");
   });
+
+  it("does not leak AppError detail for server-side failures", async () => {
+    const app = createApp();
+    app.get("/api/_server-boom", () => {
+      throw new AppError(503, "UPSTREAM_ERROR", "provider said do-not-leak", {
+        raw: "do-not-leak",
+      });
+    });
+
+    const res = await app.request(
+      "https://foonix.net/api/_server-boom",
+      undefined,
+      env,
+    );
+    const body = (await res.json()) as {
+      error: { code: string; message: string; details?: unknown };
+    };
+
+    expect(res.status).toBe(503);
+    expect(body.error.code).toBe("UPSTREAM_ERROR");
+    expect(body.error.message).toBe("An unexpected error occurred");
+    expect(body.error.details).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain("do-not-leak");
+  });
 });
 
 describe("security headers", () => {
