@@ -37,8 +37,8 @@ backend, deployed to Cloudflare Workers.
   (current state — **ready for feature development**), [`docs/production-readiness-plan.md`](docs/production-readiness-plan.md)
   (mitigation plan), and [`docs/production-readiness-assessment.md`](docs/production-readiness-assessment.md)
   (source assessment).
-- **Issue tracking:** Jira project **`KAN`** on `saxeum.atlassian.net` (via the
-  Atlassian MCP server). Backlog tickets are referenced in the readiness plan §9.
+- **Issue tracking:** Jira project **`KAN`** (private tracker). Backlog tickets are referenced in the
+  readiness plan §9.
 - **Persistence plan:** see [`docs/persistence-plan.md`](docs/persistence-plan.md)
   (D1 + Drizzle, tracking ticket **KAN-10**).
 - **OpenAPI plan:** see [`docs/openapi-plan.md`](docs/openapi-plan.md)

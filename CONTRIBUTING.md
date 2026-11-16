@@ -70,7 +70,8 @@ Handlers stay hand-written in Hono, validated with the generated Zod schemas.
 
 ## Boundaries
 
-- **Auth is deferred** (architecture D10); `/api/*` is intentionally public.
+- **Auth is enforced** on every `/api/*` route except `/api/health` (Better Auth + Google OAuth; see
+  [`docs/auth-plan.md`](docs/auth-plan.md)).
 - **Don't commit** secrets, `.dev.vars`, or per-app `package-lock.json` files —
   one root lockfile is the workspace source of truth.
 - **Keep `compatibility_date` identical** across both `wrangler.jsonc` files.

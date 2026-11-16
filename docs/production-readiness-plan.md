@@ -231,7 +231,7 @@ available per PR (`workflow-plan.md` W3).
 
 ## 9. Backlog (Jira)
 
-Tracked in project **KAN** on `saxeum.atlassian.net`:
+Tracked in project **KAN** (private tracker):
 
 | Ticket | Item |
 |---|---|

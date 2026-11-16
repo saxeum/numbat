@@ -50,7 +50,7 @@ verify → typecheck/lint/format/audit/test/build/E2E → deploy (prod+staging) 
 
 ### Operational Readiness — **DOCUMENTED & REHEARSED**
 
-- ✅ Incident response runbook ([`incident-response.md`](incident-response.md), [KAN-6](https://saxeum.atlassian.net/browse/KAN-6) ✅ Done)
+- ✅ Incident response runbook ([`incident-response.md`](incident-response.md), `KAN-6` ✅ Done)
 - ✅ Rollback procedure **rehearsed** (`wrangler rollback` against staging)
 - ✅ Manual testing guide across all 4 environments (local/preview/staging/prod)
 - ✅ D1 Time Travel recovery documented
@@ -72,10 +72,10 @@ $ curl https://foonix.net/api/health
 
 | Gap | Ticket | Impact | Blocker? |
 |---|---|---|---|
-| **Rate limiting** | [KAN-4](https://saxeum.atlassian.net/browse/KAN-4) | Public API is unthrottled; could be abused | **Low** — you're not viral yet; add when traffic warrants |
-| **Load testing** | [KAN-5](https://saxeum.atlassian.net/browse/KAN-5) | Don't know your limits | **Low** — Workers scale automatically; do this before a launch campaign |
-| **Monitoring/SLOs** | [KAN-7](https://saxeum.atlassian.net/browse/KAN-7) | No dashboards/alerts beyond health check | **Medium** — add when you need proactive alerts |
-| **Sentry** | [KAN-9](https://saxeum.atlassian.net/browse/KAN-9) | Errors only in Workers Logs | **Low** — Workers Logs is fine for now; add Sentry when error volume grows |
+| **Rate limiting** | KAN-4 | ~~Public API is unthrottled; could be abused~~ **Shipped since this review** — `API_RATE_LIMITER`, 120 requests / 60 s per client | **Closed** |
+| **Load testing** | `KAN-5` | Don't know your limits | **Low** — Workers scale automatically; do this before a launch campaign |
+| **Monitoring/SLOs** | `KAN-7` | No dashboards/alerts beyond health check | **Medium** — add when you need proactive alerts |
+| **Sentry** | `KAN-9` | Errors only in Workers Logs | **Low** — Workers Logs is fine for now; add Sentry when error volume grows |
 
 ---
 
@@ -179,7 +179,8 @@ For now: **ship features, iterate, learn.** The guardrails are in place.
 **Approved by:** production-readiness review (2026-10-20)
 
 **Risks accepted:**
-- No rate limiting (low traffic, can add reactively)
+- ~~No rate limiting (low traffic, can add reactively)~~ — **since resolved**: rate limiting is
+  configured per environment in `wrangler.jsonc` (`API_RATE_LIMITER`).
 - No dedicated monitoring/SLO dashboards (Workers Logs + health check sufficient for scale)
 - No Sentry (Workers Logs adequate for current error volume)
 

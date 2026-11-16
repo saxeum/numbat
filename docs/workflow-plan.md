@@ -56,12 +56,20 @@ the overall model.
 
 ## 4. Workstreams
 
-### W1 — Protect `main` (G1, G2) — **deferred; adopting Option C**
+### W1 — Protect `main` (G1, G2) — **done**
 
-> **Decision (2026-10-20):** GitHub Free does not enforce rulesets / branch
-> protection on **private** org repositories — that requires GitHub **Team** (or a
-> public repo). We are **not** upgrading, so W1's hard gate is deferred. This is
-> an accepted risk.
+> **Correction (2026-11-13):** this section previously recorded that rulesets could not be enforced
+> because the organisation was assumed to be on GitHub Free. That was wrong — the organisation is on
+> **GitHub Team**, and a repository ruleset (`Protect main`) has been active since 2026-10-20.
+>
+> It blocks force-push and deletion, requires changes to arrive through a pull request, requires
+> linear history, and as of 2026-11-13 requires the `typecheck · test · build` status check with a
+> strict up-to-date policy.
+>
+> `required_approving_review_count` is **0 deliberately**: there is one collaborator, and GitHub
+> forbids approving your own pull request, so requiring an approval would make every PR — including
+> the owner's — unmergeable. CI is the reviewer for this repository, and it is better that this is
+> stated plainly than implied otherwise.
 >
 > We adopt **Option C — honor-system + compensating controls**:
 > - CI (`verify`) still runs on every PR and is visible; review discipline is the
@@ -193,7 +201,7 @@ agent-doable.
 
 | Item | Owner of approval |
 |------|-------------------|
-| Rulesets / `main` protection (W1) | **Deferred** — needs GitHub Team upgrade or a public repo (Option C adopted) |
+| Rulesets / `main` protection (W1) | **Enforced** since 2026-10-20 by repository ruleset `Protect main` |
 | Required status checks (W1) | **Deferred** — same |
 | "main guard" workflow (W1, Option C) | None — agent-implementable, advisory only |
 | Lint/format in CI (W2) | None — PR review only |

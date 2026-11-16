@@ -516,12 +516,38 @@ Required repo secrets:
 | `CLOUDFLARE_API_TOKEN` | A scoped API token (see below) |
 | `CLOUDFLARE_ACCOUNT_ID` | `<CLOUDFLARE_ACCOUNT_ID>` |
 
-**Create the CI token** (Cloudflare dashboard → My Profile → API Tokens → Create
-Token) with:
-- Account → **Workers Scripts: Edit**
-- Zone (`foonix.net`) → **Workers Routes: Edit**
-- Zone (`foonix.net`) → **Zone: Read**
-- (add D1/KV/R2 perms later, when those bindings exist)
+**Create the CI token.** Grant these *capabilities*; the dashboard's navigation and labels change, so
+match on the permission names rather than on where they appear:
+
+- Account → **Workers Scripts: Edit** — `wrangler deploy` and `versions upload` for both Workers.
+- Account → **Account Settings: Read** — wrangler's account lookup. Without it, deploys fail at
+  `/accounts` with `Invalid access token`.
+- Account → **Queues: Edit** — the `numbat-probe-runs` producer/consumer declared in `wrangler.jsonc`.
+- Zone (`foonix.net`) → **Workers Routes: Edit** — the `/api/*` route and the `custom_domain` route.
+- Zone (`foonix.net`) → **Zone: Read**.
+- Zone (`foonix.net`) → **DNS: Edit** — wrangler creates the custom-domain record. Scope this to the
+  one zone; an account-wide DNS token can retarget every domain in the account.
+
+Grant nothing else. In particular **not** `Access: *` or `Cloudflare Tunnel: Edit`: a deploy token
+with identity-provider write access is a large blast radius for no benefit.
+
+> Prefer a token owned by the **account** rather than by a person, where your plan offers one — a
+> personal token stops working when that user is removed or changes role. Either way, use a token
+> dedicated to this repository. Sharing one token between this and other projects is how a working
+> deploy breaks silently when the other project edits its permissions.
+
+**Verify before storing it.** This reads back the token's real permissions, so a missing scope is
+caught here instead of in CI:
+
+```bash
+CLOUDFLARE_API_TOKEN=<new-token> npx wrangler whoami
+```
+
+Confirm `Workers Scripts: Edit` appears under `Token Permissions`, then store it:
+
+```bash
+gh secret set CLOUDFLARE_API_TOKEN
+```
 
 > The CI token is **separate** from the interactive `wrangler` OAuth session. Never
 > reuse the local OAuth credentials in CI, and never commit them.
