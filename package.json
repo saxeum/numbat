@@ -34,6 +34,9 @@
     "prettier": "^3.10.1",
     "prettier-plugin-tailwindcss": "^0.8.1"
   },
+  "overrides": {
+    "lodash": "^4.18.1"
+  },
   "allowScripts": {
     "esbuild": true,
     "workerd": true,
