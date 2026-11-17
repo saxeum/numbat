@@ -103,8 +103,9 @@ or a gateway key.
   surface.
 - **Headers** — HSTS, frame denial, `nosniff`, and a restrictive
   `Permissions-Policy` on both Workers, plus a CSP on the SPA.
-- **Abuse limits** — 120 requests/minute per IP per Cloudflare location, plus a
-  per-user cap on probe reports.
+- **Abuse limits** — 120 requests/minute per IP per Cloudflare location, a
+  stricter 10/minute bucket on sign-in, a 30/minute per-user cap on chat and
+  model routes, and a per-user cap on probe reports.
 - **Logging** — provider keys are never logged. Request and response bodies are
   only traced when `GATEWAY_LLM_LOGGING` is enabled, and it is off in production.
 - **Disclosure** — please report vulnerabilities privately; see

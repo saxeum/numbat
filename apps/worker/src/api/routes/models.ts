@@ -9,11 +9,14 @@ import {
 } from "../../db/queries/reports";
 import { availabilitySince, isFresh } from "../../reports/availability";
 import { requireUser } from "../middleware/auth";
+import { userRateLimit } from "../middleware/rate-limit";
 import type { AppEnv } from "../types";
 
 export const models = new Hono<AppEnv>();
 
 models.use("*", requireUser);
+// Per-user budget keeps catalog reads from becoming a scraping endpoint.
+models.use("*", userRateLimit);
 
 interface ModelSource {
   provider: string;

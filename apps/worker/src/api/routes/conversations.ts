@@ -29,6 +29,7 @@ import {
 } from "../../db/queries/conversations";
 import { requireSession } from "../middleware/auth";
 import { AppError } from "../middleware/error";
+import { userRateLimit } from "../middleware/rate-limit";
 import { validate } from "../openapi";
 import type { AppEnv } from "../types";
 
@@ -148,6 +149,7 @@ conversations.post(
  */
 conversations.post(
   "/:id/completions",
+  userRateLimit,
   validate("json", CreateCompletionRequest),
   async (c) => {
     const id = c.req.param("id");

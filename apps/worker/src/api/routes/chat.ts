@@ -9,12 +9,15 @@ import {
 import type { ChatCompletionRequest } from "../../gateway/openai";
 import { requireUser } from "../middleware/auth";
 import { AppError } from "../middleware/error";
+import { userRateLimit } from "../middleware/rate-limit";
 import type { AppEnv } from "../types";
 
 export const chat = new Hono<AppEnv>();
 
 // Authenticated + owner-scoped. Uses the caller's stored, encrypted credential.
 chat.use("*", requireUser);
+// Per-user budget: every completion spends provider quota.
+chat.use("*", userRateLimit);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);

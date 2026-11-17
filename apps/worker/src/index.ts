@@ -5,7 +5,7 @@ import openapi from "../openapi.json";
 import { requireSessionPage } from "./api/middleware/auth";
 import { errorHandler, notFoundHandler } from "./api/middleware/error";
 import { logger } from "./api/middleware/logger";
-import { rateLimit } from "./api/middleware/rate-limit";
+import { authRateLimit, rateLimit } from "./api/middleware/rate-limit";
 import { requestId } from "./api/middleware/request-id";
 import { securityHeaders } from "./api/middleware/security";
 import { catalog } from "./api/routes/catalog";
@@ -39,6 +39,9 @@ export function createApp() {
   api.use("*", rateLimit);
 
   // Better Auth handler (library-owned routes; not part of our OpenAPI spec).
+  // Sign-in is the credential-stuffing surface, so it gets a stricter per-IP
+  // bucket on top of the global limit.
+  api.use("/auth/*", authRateLimit);
   api.all("/auth/*", (c) => createAuth(c.env).handler(c.req.raw));
 
   api.route("/health", health);

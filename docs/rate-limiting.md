@@ -7,27 +7,41 @@ Companion to [`incident-response.md`](incident-response.md).
 
 ## 1. How it works
 
-- **Mechanism:** Cloudflare's **Workers Rate Limiting API** binding (configured in
+- **Mechanism:** Cloudflare's **Workers Rate Limiting API** bindings (configured in
   `apps/worker/wrangler.jsonc` as `ratelimits`), not an in-memory map.
-- **Binding:** `API_RATE_LIMITER`, **120 requests / 60 s**, keyed by the client
-  IP (`cf-connecting-ip`), applied to the whole `/api` surface.
+- **Layers:**
+
+  | Binding | Key | Limit | Applied to |
+  |---|---|---|---|
+  | `API_RATE_LIMITER` | client IP (`cf-connecting-ip`) | 120 / 60 s | all of `/api` |
+  | `AUTH_RATE_LIMITER` | client IP | 10 / 60 s | `/api/auth/*` |
+  | `USER_RATE_LIMITER` | authenticated user id | 30 / 60 s | `/api/chat/*`, `/api/models`, `/api/conversations/:id/completions` |
+
+  The auth bucket is deliberately small because sign-in is the credential-stuffing
+  surface. The per-user bucket covers routes that spend provider quota, and is a
+  no-op until auth has set `userId`.
+
+- **No `x-forwarded-for` fallback.** That header is client controlled and would
+  let a caller choose its own bucket; the key is `cf-connecting-ip` or `unknown`.
 - **Counting is per Cloudflare location** (colo), so a distributed client across
-  many colos gets more than 120 total — by design.
+  many colos gets more than the listed total — by design.
 - **Response when exceeded:**
   ```json
   { "error": { "code": "RATE_LIMITED", "message": "Too many requests — slow down", "requestId": "…" } }
   ```
+  The auth layer uses `Too many sign-in attempts — slow down` instead.
 - **Per environment** (separate namespaces so one env can't exhaust another):
 
-  | Env | Namespace | Worker |
-  |-----|-----------|--------|
-  | prod | `1001` | `numbat-api` |
-  | staging | `1002` | `numbat-api-staging` |
-  | preview | `1003` | `numbat-api-preview` |
+  | Env | API | Auth | User | Worker |
+  |-----|-----|------|------|--------|
+  | prod | `1001` | `1004` | `1005` | `numbat-api` |
+  | staging | `1002` | `1006` | `1007` | `numbat-api-staging` |
+  | preview | `1003` | `1008` | `1009` | `numbat-api-preview` |
 
-- Code: `apps/worker/src/api/middleware/rate-limit.ts`. The middleware **skips
-  when the binding is absent** (local `wrangler dev` and tests) — so local dev is
-  never limited.
+- Code: `apps/worker/src/api/middleware/rate-limit.ts`. All three layers are
+  **disabled when `ENVIRONMENT=development`** (local `wrangler dev` and the
+  Playwright suite share one client address, so a production budget would throttle
+  the tests) and when a binding is absent.
 
 > The Workers Rate Limiting API is **config-only** — there is no dashboard page
 > for the binding; edit `wrangler.jsonc` and redeploy to change it. (Cloudflare's

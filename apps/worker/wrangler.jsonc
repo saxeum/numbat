@@ -13,6 +13,18 @@
       "namespace_id": "1001",
       "simple": { "limit": 120, "period": 60 },
     },
+    // Stricter per-IP limit for /api/auth/* (credential stuffing).
+    {
+      "name": "AUTH_RATE_LIMITER",
+      "namespace_id": "1004",
+      "simple": { "limit": 10, "period": 60 },
+    },
+    // Per-user limit for routes that spend provider quota.
+    {
+      "name": "USER_RATE_LIMITER",
+      "namespace_id": "1005",
+      "simple": { "limit": 30, "period": 60 },
+    },
   ],
   "vars": {
     "ENVIRONMENT": "production",
@@ -68,6 +80,16 @@
           "namespace_id": "1002",
           "simple": { "limit": 120, "period": 60 },
         },
+        {
+          "name": "AUTH_RATE_LIMITER",
+          "namespace_id": "1006",
+          "simple": { "limit": 10, "period": 60 },
+        },
+        {
+          "name": "USER_RATE_LIMITER",
+          "namespace_id": "1007",
+          "simple": { "limit": 30, "period": 60 },
+        },
       ],
       "d1_databases": [
         {
@@ -108,6 +130,16 @@
           "name": "API_RATE_LIMITER",
           "namespace_id": "1003",
           "simple": { "limit": 120, "period": 60 },
+        },
+        {
+          "name": "AUTH_RATE_LIMITER",
+          "namespace_id": "1008",
+          "simple": { "limit": 10, "period": 60 },
+        },
+        {
+          "name": "USER_RATE_LIMITER",
+          "namespace_id": "1009",
+          "simple": { "limit": 30, "period": 60 },
         },
       ],
       "d1_databases": [

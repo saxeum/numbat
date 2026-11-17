@@ -16,6 +16,12 @@ const env = {
   API_RATE_LIMITER: {
     limit: async () => ({ success: true }),
   } as unknown as RateLimit,
+  AUTH_RATE_LIMITER: {
+    limit: async () => ({ success: true }),
+  } as unknown as RateLimit,
+  USER_RATE_LIMITER: {
+    limit: async () => ({ success: true }),
+  } as unknown as RateLimit,
 } satisfies Env;
 
 describe("error envelope", () => {
